@@ -1,5 +1,6 @@
-import { createReadStream, ReadStream } from 'fs';
-import { exec } from 'child_process';
+import { createReadStream } from 'fs';
+import { parse } from 'path';
+import { execSync } from 'child_process';
 import { Upload } from '@aws-sdk/lib-storage';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Mode } from '../types';
@@ -21,38 +22,21 @@ export class Uploader {
   }
 
   public async upload(filePath: string): Promise<void> {
-    const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
-    exec(
-      `docker exec ${process.env.HADOOP_LOCAL_CONTAINER_NAME} 
-            hdfs dfs -mkdir /user;
-            hdfs dfs -mkdir /user/hduser;`,
-      (err, stdout) => {
-        if (err) {
-          console.error(err);
-        } else {
-          console.log(stdout);
-        }
-      },
-    );
-
     return this.mode == Mode.LOCAL
-      ? this._uploadToLocalHadoop(fileReadStream)
-      : this._uploadToS3(fileReadStream);
+      ? this._uploadToLocalHadoop(filePath)
+      : this._uploadToS3(filePath);
   }
 
-  private async _uploadToLocalHadoop(data: ReadStream): Promise<void> {
-    console.log(data.read(100));
-    return;
-  }
+  private async _uploadToS3(filePath: string): Promise<void> {
+    const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
 
-  private async _uploadToS3(data: ReadStream): Promise<void> {
     try {
       const parallelUploads3 = new Upload({
         client: this.s3Client,
         params: {
           Bucket: process.env.BUCKET,
           Key: process.env.BUCKET_KEY,
-          Body: data,
+          Body: fileReadStream,
         },
 
         tags: [
@@ -70,6 +54,34 @@ export class Uploader {
       await parallelUploads3.done();
     } catch (e) {
       console.log(e);
+    }
+  }
+
+  private async _uploadToLocalHadoop(filePath: string): Promise<void> {
+    const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
+    const fileName = parse(filePath).base;
+
+    this._runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user`);
+    this._runShellCommand(
+      `docker exec ${container} hdfs dfs -mkdir /user/hduser`,
+    );
+    this._runShellCommand(`docker exec ${container} hdfs dfs -mkdir input`);
+    this._runShellCommand(
+      `docker cp ${filePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
+    );
+    this._runShellCommand(
+      `docker exec ${container} hdfs dfs -put /home/hduser/hadoop-3.3.3/etc/hadoop/${fileName} input`,
+    );
+
+    return;
+  }
+
+  private _runShellCommand(cmd: string): void {
+    try {
+      const resp = execSync(cmd);
+      console.log('SUCCESS:', resp);
+    } catch (err) {
+      console.error(err);
     }
   }
 }
