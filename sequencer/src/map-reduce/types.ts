@@ -1,4 +1,4 @@
 export enum Mode {
-    LOCAL,
-    EMR,
+  LOCAL,
+  EMR,
 }
