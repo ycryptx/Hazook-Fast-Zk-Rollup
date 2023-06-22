@@ -1,5 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3"
-import { Mode } from "./types";
+import { Mode } from "../types";
 
 
 /**
