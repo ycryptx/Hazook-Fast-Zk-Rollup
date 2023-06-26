@@ -31,9 +31,14 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           context: accumulator/infra/hadoop-single-node-cluster
-          tags: hadoop:latest
+          tags: hadoop
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Spin up local accumulator
         run: make up-local-accumulator
+      - name: Sleep for 10 seconds
+        run: sleep 10s
+        shell: bash
       - name: run integration tests
         working-directory: ./sequencer
         run: yarn test
