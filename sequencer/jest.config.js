@@ -1,18 +1,10 @@
-export default {
-  testEnvironment: 'node',
-  preset: 'ts-jest/presets/default-esm',
-  transform: {
-    '^.+\\.m?[tj]s?$': ['ts-jest', { useESM: true }],
-  },
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.(m)?js$': '$1',
-  },
-  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(m)?ts$',
-  coverageDirectory: 'coverage',
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    'src/**/*.mts',
-    '!src/**/*.d.ts',
-    '!src/**/*.d.mts',
-  ],
+module.exports = {
+  /* eslint-disable global-require */
+  preset: "ts-jest",
+  roots: ["<rootDir>/__tests__"],
+  testRegex: "__tests__\\/.*\\.test\\.ts$",
+  moduleFileExtensions: ["js", "ts", "json", "node"],
+  resetMocks: true,
+  testEnvironment: "node",
+  testTimeout: 30000,
 };

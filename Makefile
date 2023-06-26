@@ -24,5 +24,10 @@ build-map-reduce-steps: # builds mapper and reducer nodejs sripts to be uploaded
 generate-demo-files:
 	rm data/demo-0/tmp.txt 2> /dev/null
 	for number in {0..99} ; do \
-    	echo "1" >> data/demo-0/tmp.txt; \
+    	echo "2" >> data/demo-0/tmp.txt; \
 	done
+
+run-demo:
+	make build-map-reduce-steps
+	cd sequencer; \
+	yarn build && yarn start
