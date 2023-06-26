@@ -11,5 +11,33 @@ on:
   pull_request:
     branches:
       - "master"
-env:
 jobs:
+  run_integration_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v2.2.0
+        with:
+          node-version: 18.12
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v3
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Build local accumulator
+        run: make build-local-accumulator
+      - name: Spin up local accumulator
+        run: make up-local-accumulator
+      - name: run integration tests
+        working-directory: ./sequencer
+        run: yarn test
+
