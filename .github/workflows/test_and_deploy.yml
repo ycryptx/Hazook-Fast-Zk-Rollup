@@ -30,7 +30,7 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           context: accumulator/infra/hadoop-single-node-cluster
-          tags: $LOCAL_HADOOP_IMAGE
+          tags: ${{ env.LOCAL_HADOOP_IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Docker login
