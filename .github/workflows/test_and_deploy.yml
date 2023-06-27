@@ -39,6 +39,9 @@ jobs:
       - name: Sleep for 10 seconds
         run: sleep 10s
         shell: bash
+      - name: add test config
+        working-directory: ./sequencer
+        run: cp .env.example .env
       - name: run integration tests
         working-directory: ./sequencer
         run: yarn && yarn test
