@@ -68,12 +68,12 @@ export class Uploader {
     const fileName = parse(filePath).base;
     const mapperFilePath = resolve(
       __dirname,
-      '../..',
+      '../../../..',
       process.env.MAPPER_FILE_PATH,
     );
     const reducerFilePath = resolve(
       __dirname,
-      '../..',
+      '../../../..',
       process.env.REDUCER_FILE_PATH,
     );
 
