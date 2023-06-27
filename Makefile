@@ -22,9 +22,17 @@ build-map-reduce-steps: # builds mapper and reducer nodejs sripts to be uploaded
 	cat steps/build/src/reducer/index.js >> reducer.js;
 
 generate-demo-files:
-	rm data/demo-0/tmp.txt 2> /dev/null
-	for number in {0..99} ; do \
-    	echo "2" >> data/demo-0/tmp.txt; \
+	for number in {0..7} ; do \
+    	echo "2" >> data/demo-0/run1.txt; \
+	done
+	for number in {0..63} ; do \
+    	echo "3" >> data/demo-0/run2.txt; \
+	done
+	for number in {0..255} ; do \
+    	echo "4" >> data/demo-0/run3.txt; \
+	done
+	for number in {0..2047} ; do \
+    	echo "5" >> data/demo-0/run4.txt; \
 	done
 
 run-demo:
