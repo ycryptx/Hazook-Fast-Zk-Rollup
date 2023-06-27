@@ -33,6 +33,7 @@ jobs:
           tags: ${{ env.LOCAL_HADOOP_IMAGE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          push: true
       - name: Docker login
         uses: docker/login-action@v1
         with:
