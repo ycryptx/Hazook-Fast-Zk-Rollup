@@ -40,7 +40,7 @@ jobs:
           cache-to: type=gha,mode=max
           push: true
       - name: Spin up local accumulator
-        run: LOCAL_HADOOP_IMAGE_NAME=${{ env.LOCAL_HADOOP_IMAGE_NAME }} && make up-local-accumulator
+        run: make up-local-accumulator
       - name: Sleep for 10 seconds
         run: sleep 10s
         shell: bash
