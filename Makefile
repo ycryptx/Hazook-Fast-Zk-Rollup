@@ -6,7 +6,7 @@ help:
 build-local-accumulator: # build a Hadoop Single Node Cluster as a Docker image
 	cd accumulator/infra/hadoop-single-node-cluster; \
 	rm -rf .git; \
-	docker build -t hadoop .
+	docker build -t hadoop:latest .
 
 up-local-accumulator: # stand up a Hadoop Single Node Cluster conatainer
 	docker run --rm --name mina-accumulator -p 9864:9864 -p 9870:9870 -p 8088:8088 -p 9000:9000 --hostname localhost hadoop &
