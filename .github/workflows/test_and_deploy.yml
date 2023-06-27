@@ -9,7 +9,7 @@ jobs:
   run_integration_tests:
     runs-on: ubuntu-latest
     env:
-      LOCAL_HADOOP_IMAGE: ycryptx/mina:hadoop
+      LOCAL_HADOOP_IMAGE_NAME: ycryptx/mina:hadoop
     steps:
       - uses: actions/checkout@v2
       - name: Use Node.js
@@ -35,12 +35,12 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           context: accumulator/infra/hadoop-single-node-cluster
-          tags: ${{ env.LOCAL_HADOOP_IMAGE }}
+          tags: ${{ env.LOCAL_HADOOP_IMAGE_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
       - name: Spin up local accumulator
-        run: export LOCAL_HADOOP_IMAGE=${{ env.LOCAL_HADOOP_IMAGE }} && make up-local-accumulator
+        run: LOCAL_HADOOP_IMAGE_NAME=${{ env.LOCAL_HADOOP_IMAGE_NAME }} && make up-local-accumulator
       - name: Sleep for 10 seconds
         run: sleep 10s
         shell: bash
