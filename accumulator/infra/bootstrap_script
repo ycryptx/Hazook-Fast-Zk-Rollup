@@ -3,3 +3,5 @@
 sudo yum install nodejs18 npm --enablerepo=epel
 
 npm i -g snarkyjs
+
+export NODE_PATH=$(npm root --quiet -g)
