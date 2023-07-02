@@ -49,9 +49,11 @@ export class MapReduceClient {
     );
 
     // get result
-    return runShellCommand(
+    const hadoopResult = runShellCommand(
       `docker exec ${container} hdfs dfs -cat ${outputDir}/*`,
     );
+
+    return (hadoopResult || '').toString().trim();
   }
 
   private async _processEmr(inputFile: string): Promise<string> {
