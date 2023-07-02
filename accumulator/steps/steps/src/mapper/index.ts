@@ -7,7 +7,7 @@ const rl = createInterface({
 });
 
 const parse = (line: string): string => {
-  return line;
+  return `${parseInt(line) + 1}`;
 };
 
 // fire an event on each line read from RL
