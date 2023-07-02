@@ -7,7 +7,11 @@ RUN yarn build
 FROM node:18.12-alpine AS final
 WORKDIR /app
 COPY --from=builder /app/bundle ./bundle
-COPY package.json .
-COPY yarn.lock .
+COPY --from=builder /app/proto/protoset.bin ./proto/protoset.bin
+COPY package.json yarn.lock ./
 RUN yarn install --production
+
+EXPOSE 8080/tcp
+EXPOSE 8080/udp
+
 CMD [ "yarn", "start" ]

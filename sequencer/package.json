@@ -34,7 +34,7 @@
     "prebuild": "npm run lint",
     "build": "npm run build:protobuf && tsc -p tsconfig.json && webpack",
     "build:watch": "tsc -w -p tsconfig.json",
-    "build:protobuf": "cd ./proto && ../node_modules/.bin/buf lint; cd ..; ./node_modules/.bin/grpc_tools_node_protoc --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/server/compiled --ts_proto_opt=outputServices=nice-grpc,outputServices=generic-definitions,useExactTypes=false --proto_path=./proto ./proto/services/sequencer/v1/sequencer_service.proto --descriptor_set_out=./build/protoset.bin --include_imports",
+    "build:protobuf": "cd ./proto && ../node_modules/.bin/buf lint; cd ..; ./node_modules/.bin/grpc_tools_node_protoc --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/server/compiled --ts_proto_opt=outputServices=nice-grpc,outputServices=generic-definitions,useExactTypes=false --proto_path=./proto ./proto/services/sequencer/v1/sequencer_service.proto --descriptor_set_out=./proto/protoset.bin --include_imports",
     "build:release": "npm run clean && tsc -p tsconfig.release.json",
     "lint": "eslint . --ext .ts --ext .mts",
     "test": "jest --coverage",

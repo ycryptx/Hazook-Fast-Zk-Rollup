@@ -18,7 +18,7 @@ export const initServer = (): void => {
     server.add(
       ServerReflectionService,
       ServerReflection(
-        fs.readFileSync(path.join(__dirname, '../', 'build', 'protoset.bin')),
+        fs.readFileSync(path.join(__dirname, '../', 'proto', 'protoset.bin')),
         // specify fully-qualified names of exposed services
         [SequencerServiceDefinition.fullName],
       ),
