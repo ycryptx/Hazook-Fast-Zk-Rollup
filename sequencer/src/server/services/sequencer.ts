@@ -29,16 +29,16 @@ class Sequencer implements SequencerServiceImplementation {
     switch (request.case) {
       case Case.CASE_RUN_UNSPECIFIED:
       case Case.CASE_RUN_1:
-        inputFile = 'data/demo-0/run1.txt';
+        inputFile = 'data/run1.txt';
         break;
       case Case.CASE_RUN_2:
-        inputFile = 'data/demo-0/run2.txt';
+        inputFile = 'data/run2.txt';
         break;
       case Case.CASE_RUN_3:
-        inputFile = 'data/demo-0/run3.txt';
+        inputFile = 'data/run3.txt';
         break;
       case Case.CASE_RUN_4:
-        inputFile = 'data/demo-0/run4.txt';
+        inputFile = 'data/run4.txt';
         break;
       default:
     }

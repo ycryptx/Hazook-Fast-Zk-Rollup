@@ -12,7 +12,7 @@ describe('integration tests', () => {
     mapReduce = new MapReduceClient(Mode.LOCAL, 'ap-northeast-1');
   });
   it('1. demo-0: should sum numbers correctly', async () => {
-    const dataFilePath = resolve(__dirname, '../..', 'data/demo-0/run1.txt');
+    const dataFilePath = resolve(__dirname, '../..', 'data/run1.txt');
     const inputLocation = await mapReduce.upload(dataFilePath);
     expect(await mapReduce.process(inputLocation)).toEqual(`${2 * 8 + 8}`);
   });
