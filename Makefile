@@ -26,7 +26,7 @@ build-map-reduce-steps: # builds mapper and reducer nodejs sripts to be uploaded
 	cat steps/build/src/mapper/index.js >> mapper.js; \
 	cat steps/build/src/reducer/index.js >> reducer.js;
 
-generate-demo-files:
+generate-demo-data:
 	for number in {0..7} ; do \
     	echo "2" >> data/demo-0/run1.txt; \
 	done
@@ -39,8 +39,3 @@ generate-demo-files:
 	for number in {0..2047} ; do \
     	echo "5" >> data/demo-0/run4.txt; \
 	done
-
-run-demo:
-	make build-map-reduce-steps
-	cd sequencer; \
-	yarn build && yarn start

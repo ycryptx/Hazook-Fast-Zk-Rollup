@@ -1,6 +1,4 @@
-import { resolve } from 'path';
-import { generateStateProof } from './generateStateProof';
+import 'dotenv/config';
+import { initServer } from './server';
 
-const dataFilePath = resolve(__dirname, '../..', 'data/demo-0/run1.txt');
-
-generateStateProof(dataFilePath).then((res) => console.log(res.toString()));
+initServer();
