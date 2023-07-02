@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package services.sequencer.v1;
+
+enum Case {
+  CASE_RUN_UNSPECIFIED = 0;
+  CASE_RUN_1 = 1;
+  CASE_RUN_2 = 2;
+  CASE_RUN_3 = 3;
+  CASE_RUN_4 = 4;
+}
+
+
+service SequencerService {
+  rpc Demo(DemoRequest) returns (DemoResponse) {}
+}
+
+message DemoRequest {
+  Case case = 1;
+}
+
+message DemoResponse {
+  string result = 1;
+}

@@ -1,6 +1,6 @@
 # Fask ZK-Rollup on Mina
 
-This project demonstrates a fast zk-rollup built on Mina that uses can handle large amounts of transaction by parallelizing the computation of constructing a recursive ZK state proof. This is an important proof point for the ability for Mina and any L2s on Mina to be able to handle high throughput, as well as a core component for any high throughput zkApp.
+This project demonstrates a fast zk-rollup built on Mina that can handle large amounts of transaction by parallelizing the computation of constructing a recursive ZK state proof. This is an important proof point for the ability for Mina and any L2s on Mina to be able to handle high throughput, as well as a core component for any high throughput zkApp.
 
 ## Components
 

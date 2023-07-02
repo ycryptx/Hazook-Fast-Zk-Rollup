@@ -32,13 +32,13 @@ export class MapReduceClient {
    * @param inputFile the location of the input file that Map-Reduce should process
    * @returns the result of the MapReduce
    */
-  async process(inputFile: string): Promise<any> {
+  async process(inputFile: string): Promise<string> {
     return this.mode == Mode.LOCAL
       ? this._processLocal(inputFile)
       : this._processEmr(inputFile);
   }
 
-  private async _processLocal(inputFile: string): Promise<any> {
+  private async _processLocal(inputFile: string): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -49,12 +49,14 @@ export class MapReduceClient {
     );
 
     // get result
-    return runShellCommand(
+    const hadoopResult = runShellCommand(
       `docker exec ${container} hdfs dfs -cat ${outputDir}/*`,
     );
+
+    return (hadoopResult || '').toString().trim();
   }
 
-  private async _processEmr(inputFile: string): Promise<void> {
+  private async _processEmr(inputFile: string): Promise<string> {
     inputFile;
     const params: AddInstanceFleetCommandInput = {
       ClusterId: '',
@@ -65,9 +67,11 @@ export class MapReduceClient {
     try {
       const data = await this.emrClient.send(command);
       console.log(data);
+      return '';
       // process data.
     } catch (error) {
       // error handling.
+      return '';
     } finally {
       // finally.
     }

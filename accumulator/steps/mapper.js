@@ -8,7 +8,7 @@ const rl = (0, readline_1.createInterface)({
     input: process.stdin,
 });
 const parse = (line) => {
-    return line;
+    return `${parseInt(line) + 1}`;
 };
 // fire an event on each line read from RL
 rl.on('line', (line) => {
