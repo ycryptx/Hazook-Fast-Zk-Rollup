@@ -41,8 +41,8 @@ jobs:
           push: true
       - name: Spin up local accumulator
         run: make up-local-accumulator
-      - name: Sleep for 5 seconds
-        run: sleep 5s
+      - name: Sleep for 15s seconds
+        run: sleep 15s
         shell: bash
       - name: add test config
         working-directory: ./sequencer
