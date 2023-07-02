@@ -58,4 +58,9 @@ ENV YARNSTART 0
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && \
 sudo apt-get install -y nodejs
 
+# Install Snarkyjs as a global npm package
+RUN sudo npm i -g snarkyjs
+
+ENV NODE_PATH /usr/lib/node_modules
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
