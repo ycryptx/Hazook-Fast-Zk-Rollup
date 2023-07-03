@@ -266,121 +266,91 @@ resource "aws_security_group" "emr_core" {
   }
 }
 
-data "aws_iam_policy_document" "ec2_assume_role" {
-  statement {
-    effect = "Allow"
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-    actions = [ "sts:AssumeRole" ]
-  }
-}
-
-resource "aws_iam_role" "iam_emr_profile_role" {
-  name               = "iam_emr_profile_role"
-  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
-}
-
-resource "aws_iam_instance_profile" "emr_profile" {
-  name = "emr_profile"
-  role = aws_iam_role.iam_emr_profile_role.name
-}
-
-data "aws_iam_policy_document" "iam_emr_service_policy" {
+# EMR
+######
+data "aws_iam_policy_document" "ec2_bucket_access" {
   statement {
     effect = "Allow"
 
     actions = [
-      "ec2:AuthorizeSecurityGroupEgress",
-      "ec2:AuthorizeSecurityGroupIngress",
-      "ec2:CancelSpotInstanceRequests",
-      "ec2:CreateNetworkInterface",
-      "ec2:CreateSecurityGroup",
-      "ec2:CreateTags",
-      "ec2:DeleteNetworkInterface",
-      "ec2:DeleteSecurityGroup",
-      "ec2:DeleteTags",
-      "ec2:DescribeAvailabilityZones",
-      "ec2:DescribeAccountAttributes",
-      "ec2:DescribeDhcpOptions",
-      "ec2:DescribeInstanceStatus",
-      "ec2:DescribeInstances",
-      "ec2:DescribeKeyPairs",
-      "ec2:DescribeNetworkAcls",
-      "ec2:DescribeNetworkInterfaces",
-      "ec2:DescribePrefixLists",
-      "ec2:DescribeRouteTables",
-      "ec2:DescribeSecurityGroups",
-      "ec2:DescribeSpotInstanceRequests",
-      "ec2:DescribeSpotPriceHistory",
-      "ec2:DescribeSubnets",
-      "ec2:DescribeVpcAttribute",
-      "ec2:DescribeVpcEndpoints",
-      "ec2:DescribeVpcEndpointServices",
-      "ec2:DescribeVpcs",
-      "ec2:DetachNetworkInterface",
-      "ec2:ModifyImageAttribute",
-      "ec2:ModifyInstanceAttribute",
-      "ec2:RequestSpotInstances",
-      "ec2:RevokeSecurityGroupEgress",
-      "ec2:RunInstances",
-      "ec2:TerminateInstances",
-      "ec2:DeleteVolume",
-      "ec2:DescribeVolumeStatus",
-      "ec2:DescribeVolumes",
-      "ec2:DetachVolume",
-      "iam:GetRole",
-      "iam:GetRolePolicy",
-      "iam:ListInstanceProfiles",
-      "iam:ListRolePolicies",
-      "iam:PassRole",
-      "s3:CreateBucket",
-      "s3:Get*",
-      "s3:List*",
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject",
+      "s3:GetBucketVersioning",
+      "s3:GetObject",
+      "s3:GetObjectTagging",
+      "s3:GetObjectVersion",
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+      "s3:ListBucketVersions",
+      "s3:ListMultipartUploadParts",
+      "s3:PutBucketVersioning",
+      "s3:PutObject",
+      "s3:PutObjectTagging"
     ]
-
+    resources = ["*"]
   }
 }
 
-resource "aws_iam_role" "iam_emr_service_role" {
-  name               = "iam_emr_service_role"
-  assume_role_policy = data.aws_iam_policy_document.iam_emr_service_policy.json
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+
+    actions = [
+      "sts:AssumeRole",
+    ]
+  }
 }
 
-# EMR
-######
+resource "aws_iam_role" "iam_emr_ec2" {
+  name               = "iam_emr_ec2_role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+resource "aws_iam_role_policy" "iam_emr_ec2" {
+  name = "iam-emr-ec2"
+  role = aws_iam_role.iam_emr_ec2.name
+  policy = data.aws_iam_policy_document.ec2_bucket_access.json
+}
+
+resource "aws_iam_instance_profile" "emr_ec2" {
+  name  = "emr-ec2-profile"
+  role = aws_iam_role.iam_emr_ec2.name
+}
 
 resource "aws_emr_cluster" "accumulator" {
   name = "accumulator"
   release_label = "emr-6.11.0"
   applications = [ "Hadoop" ]
-  service_role = aws_iam_role.iam_emr_service_role.arn
+  service_role = "EMR_DefaultRole"
   ec2_attributes {
     subnet_id                         = aws_subnet.private-1.id
-    emr_managed_master_security_group = aws_security_group.emr_master.id
-    emr_managed_slave_security_group  = aws_security_group.emr_core.id
-    instance_profile                  = aws_iam_instance_profile.emr_profile.arn
+    additional_master_security_groups = "${aws_security_group.emr_master.id}"
+    additional_slave_security_groups  = "${aws_security_group.emr_core.id}"
+    instance_profile                  = aws_iam_instance_profile.emr_ec2.name
   }
 
   master_instance_group {
-    instance_type = "m5a.large"
+    instance_count = 1
+    instance_type = "m5a.xlarge"
   }
 
   core_instance_group {
-    instance_count = 1
-    instance_type  = "m5a.large"
+    instance_count = 2
+    instance_type  = "m5a.xlarge"
     # TODO: set up autoscaling policy w/ spot instances.
-    ebs_config {
-      size                 = "20"
-      type                 = "gp2"
-      volumes_per_instance = 1
-    }
   }
 
   bootstrap_action {
-    path = "s3://elasticmapreduce/bootstrap-actions/run-if"
-    name = "runif"
-    args = ["instance.isMaster=true", "echo running on master node"]
+    path = "s3://${aws_s3_bucket.emr_data.id}/emr_bootstrap_script.sh"
+    name = "emr_bootstrap_script.semr_bootstrap_script.sh"
+  }
+  tags = {
+    for-use-with-amazon-emr-managed-policies = true
+    project = "mina"
   }
 }
