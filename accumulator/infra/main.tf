@@ -8,6 +8,10 @@ variable "project" {
   default = "mina"
 }
 
+locals {
+  s3-prefix = "${var.project}-fast-zk-rollup"
+}
+
 terraform {
   backend "s3" {
     bucket = "mina-tf-state"
@@ -33,6 +37,88 @@ resource "aws_vpc" "main" {
   tags = {
     project = "${var.project}"
   }
+}
+
+# S3 Buckets
+#####################
+#
+# Creating the buckets needed by the EMR cluster to send/receive data,
+# and the one containing code and boostrap scripts.
+
+# Stores the EMR incoming data.
+resource "aws_s3_bucket" "emr_input" {
+  bucket = "${local.s3-prefix}-emr-input"
+  tags = {
+    project = "${var.project}"
+  }
+}
+
+# Stores the EMR result data.
+resource "aws_s3_bucket" "emr_output" {
+  bucket = "${local.s3-prefix}-emr-output"
+  tags = {
+    project = "${var.project}"
+  }
+}
+
+# Cleaning the input/output > 2 days objects. This is highly
+# transcient data, there's no point in keeping it forever.
+
+resource "aws_s3_bucket_lifecycle_configuration" "emr_input_expiration" {
+  bucket = aws_s3_bucket.emr_input.id
+  rule {
+    id = "expiration"
+    status = "Enabled"
+    expiration {
+      days = 2
+    }
+    filter { }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "emr_output_expiration" {
+  bucket = aws_s3_bucket.emr_output.id
+  rule {
+    id = "expiration"
+    status = "Enabled"
+    expiration {
+      days = 2
+    }
+    filter { }
+  }
+}
+
+# Stores the EMR meta data. It contains the code for the
+# mappers/reducers, the bootstrap script, etc.
+resource "aws_s3_bucket" "emr_data" {
+  bucket = "${local.s3-prefix}-emr-data"
+  tags = {
+    project = "${var.project}"
+  }
+}
+
+# TODO: we probably should rather upload those from the CI.
+# TODO: create a CI IAM role w/ write access to the emr-data bucket.
+
+resource "aws_s3_object" "emr_bootstrap_script" {
+  bucket = aws_s3_bucket.emr_data.id
+  key    = "emr_bootstrap_script.sh"
+  source = "bootstrap_script"
+  etag = filemd5("bootstrap_script")
+}
+
+resource "aws_s3_object" "emr_reducer" {
+  bucket = aws_s3_bucket.emr_data.id
+  key    = "reducer.js"
+  source = "../steps/reducer.js"
+  etag = filemd5("../steps/reducer.js")
+}
+
+resource "aws_s3_object" "emr_mapper" {
+  bucket = aws_s3_bucket.emr_data.id
+  key    = "mapper.js"
+  source = "../steps/mapper.js"
+  etag = filemd5("../steps/mapper.js")
 }
 
 # Public Subnet Setup
