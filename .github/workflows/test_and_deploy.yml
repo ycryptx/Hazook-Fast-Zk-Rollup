@@ -56,4 +56,18 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v3
+      - name: ECR Registry login
+        uses: docker/login-action@v1
+        with:
+          registry: public.ecr.aws
+          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        env:
+          AWS_REGION: "us-east-1"
+      - name: Push to ECR registry
+        uses: docker/build-push-action@v2
+        with:
+          context: accumulator/infra/hadoop-single-node-cluster
+          tags: ${{ env.LOCAL_HADOOP_IMAGE_NAME }}
+          push: true
     # TODO: upload map.js & reduce.js
