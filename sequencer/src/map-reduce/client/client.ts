@@ -1,12 +1,14 @@
 import {
   EMRClient,
-  AddInstanceFleetCommand,
-  AddInstanceFleetCommandInput,
+  AddJobFlowStepsCommand,
+  waitUntilStepComplete,
 } from '@aws-sdk/client-emr';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
 import { Uploader } from '../uploader';
 import { runShellCommand } from '../utils';
+
+const MAX_MAP_REDUCE_WAIT_TIME = 10 * 60 * 1000; // 10 minutes
 
 export class MapReduceClient {
   private mode: Mode;
@@ -57,23 +59,43 @@ export class MapReduceClient {
   }
 
   private async _processEmr(inputFile: string): Promise<string> {
-    inputFile;
-    const params: AddInstanceFleetCommandInput = {
-      ClusterId: '',
-      InstanceFleet: undefined,
-    };
-    const command = new AddInstanceFleetCommand(params);
+    const outputFile = `output-${randString.generate(7)}`;
+    const command = new AddJobFlowStepsCommand({
+      JobFlowId: '',
+      Steps: [
+        {
+          Name: 'NodeJSStreamProcess',
+          HadoopJarStep: {
+            Jar: 'command-runner.jar',
+            Args: [
+              'streaming',
+              '-files',
+              `s3://${process.env.BUCKET}-emr-data/mapper.js,s3://${process.env.BUCKET}-emr-data/reducer.js`,
+              '-input',
+              `s3://${process.env.BUCKET}-emr-data/${inputFile}`,
+              '-output',
+              `s3://${process.env.BUCKET}-emr-output/${outputFile}`, // replace with your output bucket
+              '-mapper',
+              'mapper.js',
+              '-reducer',
+              'reducer.js',
+            ],
+          },
+          ActionOnFailure: 'CONTINUE',
+        },
+      ],
+    });
 
-    try {
-      const data = await this.emrClient.send(command);
-      console.log(data);
-      return '';
-      // process data.
-    } catch (error) {
-      // error handling.
-      return '';
-    } finally {
-      // finally.
-    }
+    const data = await this.emrClient.send(command);
+    console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
+    await waitUntilStepComplete(
+      { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
+      {
+        ClusterId: '',
+        StepId: data.StepIds[0],
+      },
+    );
+    const result = await this.uploader.getObject(outputFile);
+    return result;
   }
 }

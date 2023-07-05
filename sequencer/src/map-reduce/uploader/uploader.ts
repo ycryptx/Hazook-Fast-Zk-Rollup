@@ -1,7 +1,7 @@
 import { createReadStream } from 'fs';
 import { parse, resolve } from 'path';
 import { Upload } from '@aws-sdk/lib-storage';
-import { S3Client } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';
@@ -23,6 +23,21 @@ export class Uploader {
   }
 
   /**
+   * Get an object from S3
+   *
+   * @param filePath
+   * @returns the object in string format
+   */
+  public async getObject(filePath: string): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: `${process.env.BUCKET}-emr-output`,
+      Key: filePath,
+    });
+    const result = await this.s3Client.send(command);
+    return result.Body.transformToString();
+  }
+
+  /**
    * Uploads the file to a storage accessible to the MapReduce service
    *
    * @param filePath
@@ -36,7 +51,7 @@ export class Uploader {
 
   private async _uploadToS3(filePath: string): Promise<string> {
     const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
-    const bucket = process.env.BUCKET;
+    const bucket = `${process.env.BUCKET}-emr-data`;
     const key = `input-${Date.now()}`;
 
     const parallelUploads3 = new Upload({
