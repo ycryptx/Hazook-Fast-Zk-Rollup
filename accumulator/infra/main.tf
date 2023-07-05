@@ -376,6 +376,13 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
   statement {
     effect = "Allow"
     actions = [
+      "s3:*",
+    ]
+    resources = [ aws_s3_bucket.emr_input.arn ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
       "elasticmapreduce:AddJobFlowSteps",
       "elasticmapreduce:AddTags",
       "elasticmapreduce:CancelStep",
