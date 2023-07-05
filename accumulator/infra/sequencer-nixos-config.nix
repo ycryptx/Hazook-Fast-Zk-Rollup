@@ -68,6 +68,15 @@
           image = "public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest";
           autoStart = true;
           extraOptions = [ "--expose=8080" ];
+          ports = [
+            "8080:8080"
+          ];
+          environment = {
+            MODE = "production";
+            GRPC_SERVER_PORT = "8080";
+            REGION = "eu-central-1";
+            BUCKET = "mina-fast-zk-rollup-emr-input";
+          };
         };
       };
     };

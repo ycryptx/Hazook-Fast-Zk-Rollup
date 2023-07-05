@@ -376,6 +376,13 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
   statement {
     effect = "Allow"
     actions = [
+      "s3:*",
+    ]
+    resources = [ aws_s3_bucket.emr_input.arn ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
       "elasticmapreduce:AddJobFlowSteps",
       "elasticmapreduce:AddTags",
       "elasticmapreduce:CancelStep",
@@ -404,7 +411,15 @@ resource "aws_iam_instance_profile" "sequencer_emr_profile" {
   role = aws_iam_role.sequencer_role.name
 }
 
-resource "aws_instance" "Sequencer" {
+resource "aws_eip" "sequencer-eip" {
+  instance = aws_instance.sequencer.id
+  domain = "vpc"
+   tags = {
+    project = "${var.project}"
+   }
+}
+
+resource "aws_instance" "sequencer" {
   ami = "ami-0d6ee9d5e1c985df6" # NixOS 23.05.426.afc48694f2a
   subnet_id = aws_subnet.public_1.id
   instance_type = "m5a.large"
