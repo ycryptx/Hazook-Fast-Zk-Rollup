@@ -3,7 +3,11 @@
 
 name: fast-zk-rollup-ci
 
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   run_integration_tests:
@@ -67,7 +71,7 @@ jobs:
       - name: Push to ECR registry
         uses: docker/build-push-action@v2
         with:
-          context: accumulator/infra/hadoop-single-node-cluster
+          context: sequencer
           tags: public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest
           push: true
     # TODO: upload map.js & reduce.js
