@@ -8,8 +8,10 @@ const rl = createInterface({
 });
 
 const parse = (line: string): string => {
-  // "number sum hash proof"
-  return `${line} ${0} ${Poseidon.hash([Field(parseInt(line))]).toString()}`;
+  // "number sum proof"
+  const sum = 0;
+  const proof = '';
+  return `${line} ${sum} ${proof}`;
 };
 
 // fire an event on each line read from RL

@@ -1,5 +1,12 @@
 import { createInterface } from 'readline';
-import { Field, Experimental, SelfProof, Struct, Poseidon } from 'snarkyjs';
+import {
+  Field,
+  Experimental,
+  SelfProof,
+  Struct,
+  Poseidon,
+  Proof,
+} from 'snarkyjs';
 
 export class PublicInput extends Struct({
   sum: Field,
@@ -47,7 +54,7 @@ const rl = createInterface({
 
 // variable used as an accumulator
 const summary = {
-  proof: undefined,
+  proof: '',
   sum: 0,
   number: 0,
   hash: '',
@@ -57,7 +64,7 @@ const processData = async (line: string): Promise<void> => {
   await RecursiveProgram.compile();
 
   const [, val] = line.split('\t');
-  const [_num, _sum] = val.split(' ');
+  const [_num, _sum, proof] = val.split(' ');
   const num = parseInt(_num);
   const sum = parseInt(_sum);
 
@@ -68,11 +75,25 @@ const processData = async (line: string): Promise<void> => {
     hash: Poseidon.hash([Field(newSum)]),
   });
 
-  if (!summary.proof) {
-    summary.proof = await RecursiveProgram.init(publicInput);
+  let _proof: Proof<PublicInput, void>;
+  if (!proof && !summary.proof) {
+    // this is the first line of the reduce step
+    _proof = await RecursiveProgram.init(publicInput);
+  } else if (proof && !summary.proof) {
+    // this is the first line of a combine step
+    _proof = await RecursiveProgram.step(
+      publicInput,
+      Proof.fromJSON(JSON.parse(proof)),
+    );
   } else {
-    summary.proof = await RecursiveProgram.step(publicInput, summary.proof);
+    // this is within the reduce
+    _proof = await RecursiveProgram.step(
+      publicInput,
+      Proof.fromJSON(JSON.parse(summary.proof)),
+    );
   }
+
+  summary.proof = JSON.stringify(_proof.toJSON());
   summary.sum = newSum;
   summary.number = num;
   summary.hash = publicInput.hash.toString();
@@ -85,6 +106,6 @@ rl.on('line', (line) => {
 
 // final event when the file is closed, to flush the final accumulated value
 rl.on('close', () => {
-  const { number, sum, hash, proof } = summary;
-  process.stdout.write(`${number} ${sum} ${hash} ${proof}`);
+  const { number, sum, proof } = summary;
+  process.stdout.write(`${number} ${sum} ${proof}`);
 });
