@@ -8,6 +8,7 @@ FROM node:18.12-alpine AS final
 WORKDIR /app
 COPY --from=builder /app/bundle ./bundle
 COPY --from=builder /app/proto/protoset.bin ./proto/protoset.bin
+COPY --from=builder /app/data/ ./data/
 COPY package.json yarn.lock ./
 RUN yarn install --production
 
