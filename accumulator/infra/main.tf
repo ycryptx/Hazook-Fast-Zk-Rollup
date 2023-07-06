@@ -112,17 +112,27 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
     Statement = [
       {
         Action = [
-          "s3:*",
+          "s3:ListBucket",
         ]
         Effect   = "Allow"
         Resource = [
           aws_s3_bucket.emr_data.arn
         ]
       },
+      {
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+        ]
+        Effect   = "Allow"
+        Resource = [
+          "${aws_s3_bucket.emr_data.arn}/*"
+        ]
+      },
     ]
   })
 }
-
 
 # TODO: we probably should rather upload those from the CI.
 # TODO: create a CI IAM role w/ write access to the emr-data bucket.
