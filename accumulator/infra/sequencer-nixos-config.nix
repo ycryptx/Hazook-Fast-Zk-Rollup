@@ -37,7 +37,9 @@
     enable = true;
     virtualHosts."ec2-3-120-144-49.eu-central-1.compute.amazonaws.com" = {
       addSSL = true;
-      enableACME = true;
+      # Self-signed certificates.
+      sslCertificate = "/var/lib/acme/ec2-3-120-144-49.eu-central-1.compute.amazonaws.com/cert.pem";
+      sslCertificateKey = "/var/lib/acme/ec2-3-120-144-49.eu-central-1.compute.amazonaws.com/key.pem";
       locations."/" = {
         extraConfig = ''
           grpc_pass grpc://127.0.0.1:8080;
@@ -56,6 +58,14 @@
     443
     22
   ];
+
+  # We need to explicitely route the metadata service through the
+  # subnet VPC. It won't respond from the public one.
+  networking.interfaces.en5.ipv4.routes = [ {
+    address = "169.254.169.254";
+    prefixLength = 32;
+    via = "10.0.0.1";
+  }];
 
   virtualisation = {
     podman = {
