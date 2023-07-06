@@ -1,5 +1,4 @@
 import { createInterface } from 'readline';
-import { Poseidon, Field } from 'snarkyjs';
 
 let key = 0;
 

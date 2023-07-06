@@ -39,3 +39,8 @@ generate-demo-data:
 	for number in {0..2047} ; do \
     	echo $$number >> sequencer/data/run4.txt; \
 	done
+
+start-sequencer:
+	cd sequencer; \
+	yarn build; \
+	yarn start; \
