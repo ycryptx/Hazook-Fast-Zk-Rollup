@@ -97,6 +97,33 @@ resource "aws_s3_bucket" "emr_data" {
   }
 }
 
+data "aws_iam_user" "ci_user" {
+  user_name = "docker-registry-github"
+}
+
+resource "aws_iam_user_policy" "ci_user_data_bucket" {
+  name = "ci-user-data-bucket"
+  user = data.aws_iam_user.ci_user.user_name
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:*",
+        ]
+        Effect   = "Allow"
+        Resource = [
+          aws_s3_bucket.emr_data.arn
+        ]
+      },
+    ]
+  })
+}
+
+
 # TODO: we probably should rather upload those from the CI.
 # TODO: create a CI IAM role w/ write access to the emr-data bucket.
 
@@ -379,7 +406,7 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
       "s3:*",
     ]
     resources = [
-      aws_s3_bucket.emr_input.arn
+      aws_s3_bucket.emr_input.arn,
       aws_s3_bucket.emr_output.arn
     ]
   }
