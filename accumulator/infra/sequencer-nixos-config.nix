@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   imports = [ <nixpkgs/nixos/modules/virtualisation/amazon-image.nix> ];
@@ -81,4 +81,21 @@
       };
     };
   };
+
+  # Dirty hack time. There's sadly currently no way to add some custom
+  # script to the container systemd pre-start target on NixOS.
+  # PRd a fix upstream: https://github.com/NixOS/nixpkgs/pull/241908
+  #
+  # It's going to take a while before reaching the stable releases.
+  # Until then, we vendor the upstream pre-start script in the
+  # overriden one.
+  #
+  # On top of that we pull the latest image from the docker registry
+  # to make sure we're always using the most up-to-date image.
+  systemd.services.podman-zk-rollup.preStart = lib.mkForce ''
+    podman rm -f zk-rollup || true
+    rm -f /run/podman-zk-rollup.ctr-id
+    podman pull public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest
+  '';
+
 }
