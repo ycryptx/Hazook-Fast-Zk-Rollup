@@ -1,4 +1,4 @@
-import { resolve } from 'path';
+import * as path from 'path';
 
 import {
   Case,
@@ -43,7 +43,7 @@ class Sequencer implements SequencerServiceImplementation {
       default:
     }
 
-    const absPathInputFile = resolve(__dirname, '../', inputFile);
+    const absPathInputFile = path.join(__dirname, '../', inputFile);
     // uplaod data to Hadoop
     const inputLocation = await mapReduce.upload(absPathInputFile);
 

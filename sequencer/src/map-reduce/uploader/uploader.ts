@@ -1,5 +1,5 @@
 import { createReadStream } from 'fs';
-import { parse, resolve } from 'path';
+import * as path from 'path';
 import { Upload } from '@aws-sdk/lib-storage';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
@@ -80,13 +80,13 @@ export class Uploader {
 
   private async _uploadToLocalHadoop(filePath: string): Promise<string> {
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
-    const fileName = parse(filePath).base;
-    const mapperFilePath = resolve(
+    const fileName = path.parse(filePath).base;
+    const mapperFilePath = path.join(
       __dirname,
       '../../',
       process.env.MAPPER_FILE_PATH,
     );
-    const reducerFilePath = resolve(
+    const reducerFilePath = path.join(
       __dirname,
       '../../',
       process.env.REDUCER_FILE_PATH,
