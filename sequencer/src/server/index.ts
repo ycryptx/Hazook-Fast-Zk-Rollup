@@ -13,17 +13,15 @@ export const initServer = (): void => {
 
   server.add(SequencerServiceDefinition, new Sequencer());
 
-  if (process.env.MODE == 'local') {
-    // add server reflection service
-    server.add(
-      ServerReflectionService,
-      ServerReflection(
-        fs.readFileSync(path.join(__dirname, '../', 'proto', 'protoset.bin')),
-        // specify fully-qualified names of exposed services
-        [SequencerServiceDefinition.fullName],
-      ),
-    );
-  }
+  // add server reflection service
+  server.add(
+    ServerReflectionService,
+    ServerReflection(
+      fs.readFileSync(path.join(__dirname, '../', 'proto', 'protoset.bin')),
+      // specify fully-qualified names of exposed services
+      [SequencerServiceDefinition.fullName],
+    ),
+  );
 
   server.listen(grpcAddress);
 
