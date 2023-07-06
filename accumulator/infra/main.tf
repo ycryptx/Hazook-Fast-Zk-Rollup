@@ -378,7 +378,10 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
     actions = [
       "s3:*",
     ]
-    resources = [ aws_s3_bucket.emr_input.arn ]
+    resources = [
+      aws_s3_bucket.emr_input.arn
+      aws_s3_bucket.emr_output.arn
+    ]
   }
   statement {
     effect = "Allow"
