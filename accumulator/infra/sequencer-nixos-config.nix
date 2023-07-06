@@ -75,7 +75,7 @@
             MODE = "production";
             GRPC_SERVER_PORT = "8080";
             REGION = "eu-central-1";
-            BUCKET = "mina-fast-zk-rollup-emr-input";
+            BUCKET_PREFIX = "mina-fast-zk-rollup";
           };
         };
       };

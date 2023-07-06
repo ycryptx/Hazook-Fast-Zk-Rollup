@@ -23,14 +23,14 @@ export class Uploader {
   }
 
   /**
-   * Get an object from S3
+   * Get an object from the EMR S3 output bucket
    *
    * @param filePath
    * @returns the object in string format
    */
   public async getObject(filePath: string): Promise<string> {
     const command = new GetObjectCommand({
-      Bucket: `${process.env.BUCKET}-emr-output`,
+      Bucket: `${process.env.BUCKET_PREFIX}-emr-output`,
       Key: filePath,
     });
     const result = await this.s3Client.send(command);
@@ -51,7 +51,7 @@ export class Uploader {
 
   private async _uploadToS3(filePath: string): Promise<string> {
     const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
-    const bucket = `${process.env.BUCKET}-emr-data`;
+    const bucket = `${process.env.BUCKET_PREFIX}-emr-data`;
     const key = `input-${Date.now()}`;
 
     const parallelUploads3 = new Upload({
