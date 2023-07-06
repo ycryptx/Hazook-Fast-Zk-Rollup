@@ -35,12 +35,12 @@
 
   services.nginx = {
     enable = true;
-    virtualHosts."localhost" = {
-      #addSSL = true;
+    virtualHosts."ec2-3-120-144-49.eu-central-1.compute.amazonaws.com" = {
+      addSSL = true;
+      enableACME = true;
       locations."/" = {
-        proxyPass = "http://127.0.0.1:8080";
         extraConfig = ''
-          proxy_set_header Host $host;
+          grpc_pass grpc://127.0.0.1:8080;
         '';
       };
     };
