@@ -43,7 +43,7 @@ class Sequencer implements SequencerServiceImplementation {
       default:
     }
 
-    const absPathInputFile = resolve(__dirname, '../../', inputFile);
+    const absPathInputFile = resolve(__dirname, '../', inputFile);
     // uplaod data to Hadoop
     const inputLocation = await mapReduce.upload(absPathInputFile);
 

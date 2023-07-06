@@ -28,14 +28,14 @@ build-map-reduce-steps: # builds mapper and reducer nodejs sripts to be uploaded
 
 generate-demo-data:
 	for number in {0..7} ; do \
-    	echo "2" >> data/run1.txt; \
+    	echo "2" >> sequencer/data/run1.txt; \
 	done
 	for number in {0..63} ; do \
-    	echo "3" >> data/run2.txt; \
+    	echo "3" >> sequencer/data/run2.txt; \
 	done
 	for number in {0..255} ; do \
-    	echo "4" >> data/run3.txt; \
+    	echo "4" >> sequencer/data/run3.txt; \
 	done
 	for number in {0..2047} ; do \
-    	echo "5" >> data/run4.txt; \
+    	echo "5" >> sequencer/data/run4.txt; \
 	done
