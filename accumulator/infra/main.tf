@@ -447,7 +447,7 @@ resource "aws_iam_role" "sequencer_role" {
 }
 
 resource "aws_iam_instance_profile" "sequencer_emr_profile" {
-  name = "test_profile"
+  name = "sequencer_emr_profile"
   role = aws_iam_role.sequencer_role.name
 }
 
@@ -464,7 +464,7 @@ resource "aws_instance" "sequencer" {
   subnet_id = aws_subnet.public_1.id
   instance_type = "m5a.large"
   user_data = file("./sequencer-nixos-config.nix")
-  iam_instance_profile = aws_iam_instance_profile.emr_ec2.name
+  iam_instance_profile = aws_iam_instance_profile.sequencer_emr_profile.name
   vpc_security_group_ids = [ aws_security_group.sequencer.id ]
   root_block_device {
     volume_size = 15
