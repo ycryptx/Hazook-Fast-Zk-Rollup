@@ -51,7 +51,7 @@ export class Uploader {
 
   private async _uploadToS3(filePath: string): Promise<string> {
     const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
-    const bucket = `${process.env.BUCKET_PREFIX}-emr-data`;
+    const bucket = `${process.env.BUCKET_PREFIX}-emr-input`;
     const key = `input-${Date.now()}`;
 
     const parallelUploads3 = new Upload({
