@@ -11,19 +11,22 @@ import {
 export class PublicInput extends Struct({
   sum: Field,
   number: Field,
-  hash: Field,
 }) {}
 
 export const RecursiveProgram = Experimental.ZkProgram({
   publicInput: PublicInput,
+  publicOutput: Field, // hash
 
   methods: {
     init: {
       privateInputs: [],
 
       method(publicInput: PublicInput) {
-        const { sum, hash } = publicInput;
-        hash.assertEquals(Poseidon.hash([sum]), 'incorrect sum hash');
+        const { sum, number } = publicInput;
+
+        sum.assertEquals(Field.from(0));
+
+        return Poseidon.hash([sum.add(number)]);
       },
     },
 
@@ -32,21 +35,26 @@ export const RecursiveProgram = Experimental.ZkProgram({
 
       method(
         publicInput: PublicInput,
-        earlierProof: SelfProof<PublicInput, void>,
+        earlierProof: SelfProof<PublicInput, Field>,
       ) {
-        // verify earlier proof
         earlierProof.verify();
 
-        const { number, hash } = publicInput;
+        const { number, sum } = publicInput;
+        const { sum: earlierSum } = earlierProof.publicInput;
 
-        const expectedHash = Poseidon.hash([
-          earlierProof.publicInput.sum.add(number),
-        ]);
-        hash.assertEquals(expectedHash, 'incorrect sum hash');
+        sum.assertEquals(earlierSum.add(number));
+
+        const newSum = earlierSum.add(number);
+
+        const hash = Poseidon.hash([newSum]);
+
+        return hash;
       },
     },
   },
 });
+
+export class MyProof extends Experimental.ZkProgram.Proof(RecursiveProgram) {}
 
 const rl = createInterface({
   input: process.stdin,
@@ -61,21 +69,20 @@ const summary = {
 };
 
 const processData = async (line: string): Promise<void> => {
-  await RecursiveProgram.compile();
-
   const [, val] = line.split('\t');
   const [_num, _sum, proof] = val.split(' ');
+  console.log('>>>>>>REDUCE STEP START: ', val);
+
   const num = parseInt(_num);
   const sum = parseInt(_sum);
 
-  const newSum = num + sum;
+  const newSum = num + sum + summary.sum;
   const publicInput = new PublicInput({
     sum: Field(newSum),
     number: Field(num),
-    hash: Poseidon.hash([Field(newSum)]),
   });
 
-  let _proof: Proof<PublicInput, void>;
+  let _proof: Proof<PublicInput, Field>;
   if (!proof && !summary.proof) {
     // this is the first line of the reduce step
     _proof = await RecursiveProgram.init(publicInput);
@@ -83,29 +90,51 @@ const processData = async (line: string): Promise<void> => {
     // this is the first line of a combine step
     _proof = await RecursiveProgram.step(
       publicInput,
-      Proof.fromJSON(JSON.parse(proof)),
+      MyProof.fromJSON(JSON.parse(proof)),
     );
   } else {
     // this is within the reduce
     _proof = await RecursiveProgram.step(
       publicInput,
-      Proof.fromJSON(JSON.parse(summary.proof)),
+      MyProof.fromJSON(JSON.parse(summary.proof)),
     );
   }
 
   summary.proof = JSON.stringify(_proof.toJSON());
   summary.sum = newSum;
   summary.number = num;
-  summary.hash = publicInput.hash.toString();
+  summary.hash = _proof.publicOutput.toString();
+  console.log('>>>>>>REDUCE STEP DONE: ', JSON.stringify(summary));
 };
 
+const queue = [] as string[];
+
+let closed = false;
+
+const runProving = async (): Promise<void> => {
+  await RecursiveProgram.compile();
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const line = queue.shift();
+    if (line) {
+      await processData(line);
+    } else if (closed) {
+      const { number, sum, proof } = summary;
+      process.stdout.write(`${number} ${sum} ${proof}`);
+      return;
+    }
+  }
+};
+
+runProving();
+
 // fire an event on each line read from RL
-rl.on('line', (line) => {
-  processData(line);
+rl.on('line', async (line) => {
+  queue.push(line);
 });
 
 // final event when the file is closed, to flush the final accumulated value
 rl.on('close', () => {
-  const { number, sum, proof } = summary;
-  process.stdout.write(`${number} ${sum} ${proof}`);
+  closed = true;
 });
