@@ -1,6 +1,7 @@
-// TODO: add tests
-describe('test', () => {
-  it('should do foo', () => {
+import * as path from 'path';
+describe('test map reduce', () => {
+  it('case 1', () => {
+    path.join(__dirname, 'misc/run.txt');
     expect(true).toBe(true);
   });
 });
