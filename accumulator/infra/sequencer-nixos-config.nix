@@ -67,6 +67,16 @@
     via = "10.0.0.1";
   }];
 
+  networking.nat = {
+    enable = true;
+    internalInterfaces = [
+      "podman0"
+    ];
+    externalInterfaces = [
+      "ens5"
+    ];
+  };
+
   virtualisation = {
     podman = {
       enable = true;
