@@ -169,7 +169,7 @@ resource "aws_subnet" "public_1" {
   vpc_id = "${aws_vpc.main.id}"
   cidr_block = "10.0.0.0/24"
   map_public_ip_on_launch = "true"
-  availability_zone = "${var.region}a"
+  availability_zone = "${var.region}b"
   tags = {
     project = "${var.project}"
   }
@@ -209,7 +209,7 @@ resource "aws_route_table_association" "public-1"{
 resource "aws_subnet" "private_1" {
   vpc_id = "${aws_vpc.main.id}"
   cidr_block = "10.0.1.0/24"
-  availability_zone = "${var.region}a"
+  availability_zone = "${var.region}b"
   tags = {
     project = "${var.project}"
   }
@@ -374,18 +374,25 @@ resource "aws_emr_cluster" "accumulator" {
   master_instance_group {
     instance_count = 1
     instance_type = "m5a.xlarge"
+    # The spot market for this instance has been stable and under .15 for
+    # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
+    # Note: we probably want a non-spot master node in production.
+    bid_price = 0.15
   }
 
   core_instance_group {
     instance_count = 1
     instance_type  = "m5a.xlarge"
-    # TODO: set up autoscaling policy w/ spot instances.
+    # The spot market for this instance has been stable and under .15 for
+    # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
+    bid_price = 0.15
   }
 
   bootstrap_action {
     path = "s3://${aws_s3_bucket.emr_data.id}/emr_bootstrap_script.sh"
     name = "emr_bootstrap_script.semr_bootstrap_script.sh"
   }
+
   tags = {
     for-use-with-amazon-emr-managed-policies = true
     project = "mina"
