@@ -424,7 +424,9 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
     ]
     resources = [
       aws_s3_bucket.emr_input.arn,
-      aws_s3_bucket.emr_output.arn
+      aws_s3_bucket.emr_output.arn,
+      "${aws_s3_bucket.emr_input.arn}/*",
+      "${aws_s3_bucket.emr_output.arn}/*"
     ]
   }
   statement {
