@@ -424,7 +424,9 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
     ]
     resources = [
       aws_s3_bucket.emr_input.arn,
-      aws_s3_bucket.emr_output.arn
+      aws_s3_bucket.emr_output.arn,
+      "${aws_s3_bucket.emr_input.arn}/*",
+      "${aws_s3_bucket.emr_output.arn}/*"
     ]
   }
   statement {
@@ -441,16 +443,30 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
     ]
     resources = ["*"]
   }
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:PassRole"
+    ]
+    resources = ["*"]
+    condition {
+      test = "StringEquals"
+      variable = "iam:PassedToService"
+      values = [ "ec2.amazonaws.com" ]
+    }
+  }
+}
+
+resource "aws_iam_policy" "sequencer_policy" {
+  name = "sequencer-policy"
+  policy = data.aws_iam_policy_document.sequencer_role_policy.json
 }
 
 resource "aws_iam_role" "sequencer_role" {
   name = "sequencer-role"
   path = "/"
   assume_role_policy = data.aws_iam_policy_document.sequencer_assume_role_policy.json
-  inline_policy {
-    name = "emr-access"
-    policy = data.aws_iam_policy_document.sequencer_role_policy.json
-  }
+  managed_policy_arns = [ aws_iam_policy.sequencer_policy.arn ]
 }
 
 resource "aws_iam_instance_profile" "sequencer_emr_profile" {

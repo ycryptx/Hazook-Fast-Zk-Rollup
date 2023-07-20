@@ -61,11 +61,21 @@
 
   # We need to explicitely route the metadata service through the
   # subnet VPC. It won't respond from the public one.
-  networking.interfaces.en5.ipv4.routes = [ {
+  networking.interfaces.ens5.ipv4.routes = [ {
     address = "169.254.169.254";
     prefixLength = 32;
     via = "10.0.0.1";
   }];
+
+  networking.nat = {
+    enable = true;
+    internalInterfaces = [
+      "podman0"
+    ];
+    externalInterfaces = [
+      "ens5"
+    ];
+  };
 
   virtualisation = {
     podman = {
