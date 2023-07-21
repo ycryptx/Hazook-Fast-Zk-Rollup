@@ -370,6 +370,8 @@ resource "aws_emr_cluster" "accumulator" {
     additional_slave_security_groups  = "${aws_security_group.emr_core.id}"
     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
   }
+  
+  log_uri = "s3://${aws_s3_bucket.emr_data.id}"
 
   master_instance_group {
     instance_count = 1
