@@ -371,6 +371,8 @@ resource "aws_emr_cluster" "accumulator" {
     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
   }
 
+  log_uri = "s3://${aws_s3_bucket.emr_data.id}"
+
   master_instance_group {
     instance_count = 1
     instance_type = "m5a.xlarge"
@@ -449,11 +451,6 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
       "iam:PassRole"
     ]
     resources = ["*"]
-    condition {
-      test = "StringEquals"
-      variable = "iam:PassedToService"
-      values = [ "ec2.amazonaws.com" ]
-    }
   }
 }
 
