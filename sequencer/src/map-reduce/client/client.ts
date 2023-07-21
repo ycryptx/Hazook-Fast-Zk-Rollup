@@ -72,7 +72,9 @@ export class MapReduceClient {
           },
         },
       ],
-      ReleaseLabel: 'emr-6.4.0', // EMR release version
+      ReleaseLabel: 'emr-6.11.0', // EMR release version
+      ServiceRole: 'EMR_DefaultRole',
+      JobFlowRole: 'iam_emr_ec2_role',
       Instances: {
         InstanceFleets: [
           {
@@ -86,7 +88,7 @@ export class MapReduceClient {
           },
           {
             InstanceFleetType: 'CORE',
-            TargetOnDemandCapacity: 2, // Number of core instances
+            TargetOnDemandCapacity: 1, // Number of core instances
             InstanceTypeConfigs: [
               {
                 InstanceType: 'm5.xlarge', // Core instance type
