@@ -75,7 +75,7 @@ export class Uploader {
     });
 
     await parallelUploads3.done();
-    return `${bucket}:${key}`;
+    return `${bucket}/${key}`;
   }
 
   private async _uploadToLocalHadoop(filePath: string): Promise<string> {
