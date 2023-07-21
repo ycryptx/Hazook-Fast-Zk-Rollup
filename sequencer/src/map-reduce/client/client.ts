@@ -74,7 +74,7 @@ export class MapReduceClient {
       ],
       ReleaseLabel: 'emr-6.11.0', // EMR release version
       ServiceRole: 'EMR_DefaultRole',
-      JobFlowRole: 'iam_emr_ec2_role',
+      JobFlowRole: 'emr-ec2-profile',
       Instances: {
         InstanceFleets: [
           {
