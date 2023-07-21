@@ -79,7 +79,7 @@ export class MapReduceClient {
           HadoopJarStep: {
             Jar: 'command-runner.jar',
             Args: [
-              'streaming',
+              'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
               '-input',
