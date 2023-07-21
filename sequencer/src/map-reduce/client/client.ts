@@ -68,7 +68,7 @@ export class MapReduceClient {
         {
           Name: 'install-nodejs',
           ScriptBootstrapAction: {
-            Path: `${process.env.BUCKET_PREFIX}-emr-data/emr_bootstrap_script.sh`,
+            Path: `s3://${process.env.BUCKET_PREFIX}-emr-data/emr_bootstrap_script.sh`,
           },
         },
       ],
