@@ -4,6 +4,10 @@ import {
   DescribeClusterCommand,
   waitUntilClusterRunning,
   waitUntilClusterTerminated,
+  waitUntilStepComplete,
+  AddJobFlowStepsCommand,
+  ListClustersCommand,
+  ClusterState,
 } from '@aws-sdk/client-emr';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
@@ -61,6 +65,53 @@ export class MapReduceClient {
   }
 
   private async _processEmr(inputFile: string): Promise<string> {
+    // we can cache this
+    const clusters = await this.emrClient.send(
+      new ListClustersCommand({ ClusterStates: [ClusterState.WAITING] }),
+    );
+
+    const outputFile = `output-${randString.generate(7)}`;
+    const command = new AddJobFlowStepsCommand({
+      JobFlowId: clusters.Clusters[0].Id,
+      Steps: [
+        {
+          Name: 'NodeJSStreamProcess',
+          HadoopJarStep: {
+            Jar: 'command-runner.jar',
+            Args: [
+              'streaming',
+              '-files',
+              `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
+              '-input',
+              `s3://${process.env.BUCKET_PREFIX}-emr-data/${inputFile}`,
+              '-output',
+              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputFile}`, // replace with your output bucket
+              '-mapper',
+              'mapper.js',
+              '-reducer',
+              'reducer.js',
+            ],
+          },
+          ActionOnFailure: 'CONTINUE',
+        },
+      ],
+    });
+
+    const data = await this.emrClient.send(command);
+    console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
+    await waitUntilStepComplete(
+      { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
+      {
+        ClusterId: '',
+        StepId: data.StepIds[0],
+      },
+    );
+    const result = await this.uploader.getObject(outputFile);
+    console.log('Map reduce result:', result);
+    return result;
+  }
+
+  async _runJobFlow(inputFile: string): Promise<string> {
     const outputFile = `output-${randString.generate(7)}`;
     const command = new RunJobFlowCommand({
       Name: 'accumulator',
