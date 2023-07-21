@@ -83,7 +83,7 @@ export class MapReduceClient {
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
               '-input',
-              `s3://${process.env.BUCKET_PREFIX}-emr-data/${inputFile}`,
+              `s3://${inputFile}`,
               '-output',
               `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputFile}`, // replace with your output bucket
               '-mapper',
