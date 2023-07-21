@@ -1,7 +1,9 @@
 import {
   EMRClient,
-  AddJobFlowStepsCommand,
-  waitUntilStepComplete,
+  RunJobFlowCommand,
+  DescribeClusterCommand,
+  waitUntilClusterRunning,
+  waitUntilClusterTerminated,
 } from '@aws-sdk/client-emr';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
@@ -60,8 +62,45 @@ export class MapReduceClient {
 
   private async _processEmr(inputFile: string): Promise<string> {
     const outputFile = `output-${randString.generate(7)}`;
-    const command = new AddJobFlowStepsCommand({
-      JobFlowId: '',
+    const command = new RunJobFlowCommand({
+      Name: 'accumulator',
+      BootstrapActions: [
+        {
+          Name: 'install-nodejs',
+          ScriptBootstrapAction: {
+            Path: `${process.env.BUCKET_PREFIX}-emr-data/emr_bootstrap_script.sh`,
+          },
+        },
+      ],
+      ReleaseLabel: 'emr-6.4.0', // EMR release version
+      Instances: {
+        InstanceFleets: [
+          {
+            InstanceFleetType: 'MASTER',
+            TargetOnDemandCapacity: 1, // Number of master instances
+            InstanceTypeConfigs: [
+              {
+                InstanceType: 'm5.xlarge', // Master instance type
+              },
+            ],
+          },
+          {
+            InstanceFleetType: 'CORE',
+            TargetOnDemandCapacity: 2, // Number of core instances
+            InstanceTypeConfigs: [
+              {
+                InstanceType: 'm5.xlarge', // Core instance type
+              },
+            ],
+          },
+        ],
+        KeepJobFlowAliveWhenNoSteps: true,
+      },
+      Applications: [
+        {
+          Name: 'Hadoop',
+        },
+      ],
       Steps: [
         {
           Name: 'NodeJSStreamProcess',
@@ -86,16 +125,43 @@ export class MapReduceClient {
       ],
     });
 
-    const data = await this.emrClient.send(command);
-    console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
-    await waitUntilStepComplete(
-      { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
-      {
-        ClusterId: '',
-        StepId: data.StepIds[0],
-      },
-    );
+    try {
+      const { JobFlowId } = await this.emrClient.send(command);
+      console.log('EMR job started successfully. JobFlowId:', JobFlowId);
+
+      // Wait for the EMR job to complete
+      await this._waitForJobCompletion(JobFlowId);
+    } catch (err) {
+      console.error('Error starting EMR job:', err);
+    }
+
     const result = await this.uploader.getObject(outputFile);
     return result;
+  }
+
+  async _waitForJobCompletion(jobFlowId): Promise<void> {
+    const describeClusterParams = { ClusterId: jobFlowId };
+
+    try {
+      console.log('Waiting for cluster to be running...');
+      await this.emrClient.send(
+        new DescribeClusterCommand(describeClusterParams),
+      );
+      await waitUntilClusterRunning(
+        { client: this.emrClient, maxWaitTime: 600000 },
+        describeClusterParams,
+      );
+
+      console.log('Cluster is now running.');
+
+      // Wait for the cluster to reach a terminal state (COMPLETED, FAILED, or TERMINATED)
+      await waitUntilClusterTerminated(
+        { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
+        describeClusterParams,
+      );
+      console.log('EMR job completed.');
+    } catch (err) {
+      console.error('Error waiting for cluster or EMR job termination:', err);
+    }
   }
 }
