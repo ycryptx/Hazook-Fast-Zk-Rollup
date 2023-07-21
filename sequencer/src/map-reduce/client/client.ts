@@ -133,12 +133,12 @@ export class MapReduceClient {
 
       // Wait for the EMR job to complete
       await this._waitForJobCompletion(JobFlowId);
+      const result = await this.uploader.getObject(outputFile);
+      return result;
     } catch (err) {
       console.error('Error starting EMR job:', err);
+      throw err;
     }
-
-    const result = await this.uploader.getObject(outputFile);
-    return result;
   }
 
   async _waitForJobCompletion(jobFlowId): Promise<void> {
@@ -164,6 +164,7 @@ export class MapReduceClient {
       console.log('EMR job completed.');
     } catch (err) {
       console.error('Error waiting for cluster or EMR job termination:', err);
+      throw err;
     }
   }
 }
