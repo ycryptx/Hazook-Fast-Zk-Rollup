@@ -1,7 +1,8 @@
 #!/bin/bash
 
-sudo yum -y install nodejs npm
-
-npm i -g snarkyjs
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+. ~/.nvm/nvm.sh
+nvm install 18
+nvm alias default 18
 
 export NODE_PATH=$(npm root --quiet -g)
