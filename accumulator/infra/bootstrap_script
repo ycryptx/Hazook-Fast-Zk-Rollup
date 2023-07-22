@@ -7,4 +7,7 @@ nvm alias default 17
 
 npm i -g snarkyjs
 
+sudo ln -s "$(which node)" /usr/bin/node
+sudo ln -s "$(which npm)" /usr/bin/npm
+
 export NODE_PATH=$(npm root --quiet -g)
