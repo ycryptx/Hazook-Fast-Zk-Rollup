@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo yum install nodejs18 npm --enablerepo=epel
+sudo yum -y install nodejs npm
 
 npm i -g snarkyjs
 
