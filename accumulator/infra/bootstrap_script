@@ -2,8 +2,8 @@
 
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 . ~/.nvm/nvm.sh
-nvm install 18
-nvm alias default 18
+nvm install 17
+nvm alias default 17
 
 npm i -g snarkyjs
 
