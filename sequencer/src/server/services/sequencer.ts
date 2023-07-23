@@ -26,6 +26,8 @@ class Sequencer implements SequencerServiceImplementation {
     const response: DemoResponse = { result: '' };
     let inputFile = '';
 
+    const start = Date.now();
+
     switch (request.case) {
       case Case.CASE_RUN_UNSPECIFIED:
       case Case.CASE_RUN_1:
@@ -49,6 +51,12 @@ class Sequencer implements SequencerServiceImplementation {
 
     // start Hadoop map-reduce operation
     response.result = await mapReduce.process(inputLocation);
+
+    const end = Date.now();
+
+    console.log(`Demo ${request.case} finished`);
+    console.log(`Result: ${response.result}`);
+    console.log(`Running time: ${end - start} ms`);
 
     return response;
   };
