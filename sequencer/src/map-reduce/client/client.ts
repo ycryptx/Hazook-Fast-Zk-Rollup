@@ -14,7 +14,7 @@ import { Mode } from '../types';
 import { Uploader } from '../uploader';
 import { runShellCommand } from '../utils';
 
-const MAX_MAP_REDUCE_WAIT_TIME = 10 * 60 * 1000; // 10 minutes
+const MAX_MAP_REDUCE_WAIT_TIME = 10 * 60; // 10 minutes
 
 export class MapReduceClient {
   private mode: Mode;
