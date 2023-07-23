@@ -69,10 +69,11 @@ export class MapReduceClient {
     const clusters = await this.emrClient.send(
       new ListClustersCommand({ ClusterStates: [ClusterState.WAITING] }),
     );
+    const clusterId = clusters.Clusters[0].Id;
 
     const outputFile = `output-${randString.generate(7)}`;
     const command = new AddJobFlowStepsCommand({
-      JobFlowId: clusters.Clusters[0].Id,
+      JobFlowId: clusterId,
       Steps: [
         {
           Name: 'NodeJSStreamProcess',
@@ -102,12 +103,11 @@ export class MapReduceClient {
     await waitUntilStepComplete(
       { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
       {
-        ClusterId: '',
+        ClusterId: clusterId,
         StepId: data.StepIds[0],
       },
     );
     const result = await this.uploader.getObject(outputFile);
-    console.log('Map reduce result:', result);
     return result;
   }
 
