@@ -71,7 +71,7 @@ export class MapReduceClient {
     );
     const clusterId = clusters.Clusters[0].Id;
 
-    const outputFile = `output-${randString.generate(7)}`;
+    const outputDir = `output-${randString.generate(7)}`;
     const command = new AddJobFlowStepsCommand({
       JobFlowId: clusterId,
       Steps: [
@@ -86,7 +86,7 @@ export class MapReduceClient {
               '-input',
               `s3://${inputFile}`,
               '-output',
-              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputFile}`, // replace with your output bucket
+              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputDir}`,
               '-mapper',
               'mapper.js',
               '-reducer',
@@ -107,12 +107,14 @@ export class MapReduceClient {
         StepId: data.StepIds[0],
       },
     );
-    const result = await this.uploader.getObject(outputFile);
-    return result;
+    const results = await this.uploader.getEMROutputObjects(outputDir);
+
+    // TODO: verify this is what we want
+    return results.join('\n');
   }
 
   async _runJobFlow(inputFile: string): Promise<string> {
-    const outputFile = `output-${randString.generate(7)}`;
+    const outputDir = `output-${randString.generate(7)}`;
     const command = new RunJobFlowCommand({
       Name: 'accumulator',
       BootstrapActions: [
@@ -166,7 +168,7 @@ export class MapReduceClient {
               '-input',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/${inputFile}`,
               '-output',
-              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputFile}`, // replace with your output bucket
+              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputDir}`, // replace with your output bucket
               '-mapper',
               'mapper.js',
               '-reducer',
@@ -184,8 +186,10 @@ export class MapReduceClient {
 
       // Wait for the EMR job to complete
       await this._waitForJobCompletion(JobFlowId);
-      const result = await this.uploader.getObject(outputFile);
-      return result;
+      const results = await this.uploader.getEMROutputObjects(outputDir);
+
+      // TODO: verify this is what we want
+      return results.join('\n');
     } catch (err) {
       console.error('Error starting EMR job:', err);
       throw err;
