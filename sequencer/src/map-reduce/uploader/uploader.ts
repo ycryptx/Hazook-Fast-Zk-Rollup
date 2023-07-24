@@ -77,11 +77,11 @@ export class Uploader {
    */
   public async upload(filePath: string): Promise<string> {
     return this.mode == Mode.LOCAL
-      ? this._uploadToLocalHadoop(filePath)
-      : this._uploadToS3(filePath);
+      ? this.uploadToLocalHadoop(filePath)
+      : this.uploadToS3(filePath);
   }
 
-  private async _uploadToS3(filePath: string): Promise<string> {
+  private async uploadToS3(filePath: string): Promise<string> {
     const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
     const bucket = `${process.env.BUCKET_PREFIX}-emr-input`;
     const key = `input-${Date.now()}`;
@@ -110,7 +110,7 @@ export class Uploader {
     return `${bucket}/${key}`;
   }
 
-  private async _uploadToLocalHadoop(filePath: string): Promise<string> {
+  private async uploadToLocalHadoop(filePath: string): Promise<string> {
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
     const fileName = path.parse(filePath).base;
     const mapperFilePath = path.join(

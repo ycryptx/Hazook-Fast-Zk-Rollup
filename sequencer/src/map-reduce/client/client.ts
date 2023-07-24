@@ -1,13 +1,12 @@
 import {
   EMRClient,
   RunJobFlowCommand,
-  DescribeClusterCommand,
   waitUntilClusterRunning,
-  waitUntilClusterTerminated,
   waitUntilStepComplete,
   AddJobFlowStepsCommand,
   ListClustersCommand,
   ClusterState,
+  ScaleDownBehavior,
 } from '@aws-sdk/client-emr';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
@@ -42,11 +41,11 @@ export class MapReduceClient {
    */
   async process(inputFile: string): Promise<string> {
     return this.mode == Mode.LOCAL
-      ? this._processLocal(inputFile)
-      : this._processEmr(inputFile);
+      ? this.processLocal(inputFile)
+      : this.processEmr(inputFile);
   }
 
-  private async _processLocal(inputFile: string): Promise<string> {
+  private async processLocal(inputFile: string): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -64,12 +63,20 @@ export class MapReduceClient {
     return (hadoopResult || '').toString().trim();
   }
 
-  private async _processEmr(inputFile: string): Promise<string> {
-    // we can cache this
+  private async processEmr(inputFile: string): Promise<string> {
+    // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({ ClusterStates: [ClusterState.WAITING] }),
     );
-    const clusterId = clusters.Clusters[0].Id;
+
+    let clusterId: string;
+
+    if (clusters.Clusters.length == 0) {
+      // no cluster available so initialize it
+      clusterId = await this.initCluster();
+    } else {
+      clusterId = clusters.Clusters[0].Id;
+    }
 
     const outputDir = `output-${randString.generate(7)}`;
     const command = new AddJobFlowStepsCommand({
@@ -113,10 +120,10 @@ export class MapReduceClient {
     return results.join('\n');
   }
 
-  async _runJobFlow(inputFile: string): Promise<string> {
-    const outputDir = `output-${randString.generate(7)}`;
+  async initCluster(): Promise<string> {
     const command = new RunJobFlowCommand({
       Name: 'accumulator',
+      LogUri: `s3://${process.env.BUCKET_PREFIX}-emr-data`,
       BootstrapActions: [
         {
           Name: 'install-nodejs',
@@ -151,31 +158,10 @@ export class MapReduceClient {
         ],
         KeepJobFlowAliveWhenNoSteps: true,
       },
+      ScaleDownBehavior: ScaleDownBehavior.TERMINATE_AT_TASK_COMPLETION,
       Applications: [
         {
           Name: 'Hadoop',
-        },
-      ],
-      Steps: [
-        {
-          Name: 'NodeJSStreamProcess',
-          HadoopJarStep: {
-            Jar: 'command-runner.jar',
-            Args: [
-              'hadoop-streaming',
-              '-files',
-              `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
-              '-input',
-              `s3://${process.env.BUCKET_PREFIX}-emr-data/${inputFile}`,
-              '-output',
-              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputDir}`, // replace with your output bucket
-              '-mapper',
-              'mapper.js',
-              '-reducer',
-              'reducer.js',
-            ],
-          },
-          ActionOnFailure: 'CONTINUE',
         },
       ],
     });
@@ -185,41 +171,21 @@ export class MapReduceClient {
       console.log('EMR job started successfully. JobFlowId:', JobFlowId);
 
       // Wait for the EMR job to complete
-      await this._waitForJobCompletion(JobFlowId);
-      const results = await this.uploader.getEMROutputObjects(outputDir);
-
-      // TODO: verify this is what we want
-      return results.join('\n');
+      await this.waitForClusterRunning(JobFlowId);
+      return JobFlowId;
     } catch (err) {
-      console.error('Error starting EMR job:', err);
+      console.error('Error initializing EMR cluster:', err);
       throw err;
     }
   }
 
-  async _waitForJobCompletion(jobFlowId): Promise<void> {
+  private async waitForClusterRunning(jobFlowId): Promise<void> {
+    console.log('Waiting for cluster to be ready...');
     const describeClusterParams = { ClusterId: jobFlowId };
-
-    try {
-      console.log('Waiting for cluster to be running...');
-      await this.emrClient.send(
-        new DescribeClusterCommand(describeClusterParams),
-      );
-      await waitUntilClusterRunning(
-        { client: this.emrClient, maxWaitTime: 600000 },
-        describeClusterParams,
-      );
-
-      console.log('Cluster is now running.');
-
-      // Wait for the cluster to reach a terminal state (COMPLETED, FAILED, or TERMINATED)
-      await waitUntilClusterTerminated(
-        { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
-        describeClusterParams,
-      );
-      console.log('EMR job completed.');
-    } catch (err) {
-      console.error('Error waiting for cluster or EMR job termination:', err);
-      throw err;
-    }
+    await waitUntilClusterRunning(
+      { client: this.emrClient, maxWaitTime: 600000 },
+      describeClusterParams,
+    );
+    console.log('EMR Cluster is ready');
   }
 }
