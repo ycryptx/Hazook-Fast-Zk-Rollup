@@ -7,6 +7,7 @@ nvm alias default 17
 
 sudo ln -s "$(which node)" /usr/bin/node
 sudo ln -s "$(which npm)" /usr/bin/npm
+sudo ln -sf "$(npm root --quiet -g)" "$(dirname $(npm root --quiet -g))/node"
 
 export NODE_PATH=$(npm root --quiet -g)
 

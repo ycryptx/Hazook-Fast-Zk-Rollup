@@ -75,7 +75,7 @@ jobs:
         run: |
             aws s3 cp ./accumulator/steps/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
             aws s3 cp ./accumulator/steps/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
-            aws s3 cp ./accumulator/infra/bootstrap_script s3://${{ env.DATA_BUCKET_NAME }}/emr_bootstrap_script.sh
+            aws s3 cp ./accumulator/infra/emr_bootstrap_script.sh s3://${{ env.DATA_BUCKET_NAME }}/emr_bootstrap_script.sh
         env:
           DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
