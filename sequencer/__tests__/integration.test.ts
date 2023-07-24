@@ -3,6 +3,11 @@ import * as path from 'path';
 import { MapReduceClient } from '../src/map-reduce';
 import { Mode } from '../src/map-reduce';
 
+/**
+ * Have each state be the hash of a number, and each transaction be a number.
+ * Make the snark prove the sum of all the numbers in the transactions.
+ * Use that to accumulate 8, 64, 256, 2048, and 16384 transactions.
+ */
 describe('integration tests', () => {
   let mapReduce: MapReduceClient;
 
