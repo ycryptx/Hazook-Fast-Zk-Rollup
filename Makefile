@@ -23,8 +23,8 @@ build-map-reduce-steps: # builds mapper and reducer nodejs sripts to be uploaded
 	rm mapper.js reducer.js; \
 	echo '#!/usr/bin/env node\n' > mapper.js; \
 	echo '#!/usr/bin/env node\n' > reducer.js; \
-	cat steps/build/src/mapper/index.js >> mapper.js; \
-	cat steps/build/src/reducer/index.js >> reducer.js;
+	cat steps/bundle/mapper/index.js >> mapper.js; \
+	cat steps/bundle/reducer/index.js >> reducer.js;
 
 generate-demo-data:
 	for number in {0..7} ; do \
