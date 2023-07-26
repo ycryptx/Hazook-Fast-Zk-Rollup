@@ -18,108 +18,101 @@ module.exports = require("readline");
 
 /***/ }),
 
+/***/ 587:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RollupProof = exports.Rollup = exports.RollupState = void 0;
+const snarkyjs_1 = __webpack_require__(476);
+class RollupState extends (0, snarkyjs_1.Struct)({
+    hashedSum: snarkyjs_1.Field,
+    sum: snarkyjs_1.Field,
+}) {
+    static createOneStep(number) {
+        return new RollupState({
+            hashedSum: snarkyjs_1.Poseidon.hash([number]),
+            sum: number,
+        });
+    }
+    static createMerged(state1, state2) {
+        const sum = state1.sum.add(state2.sum);
+        return new RollupState({
+            hashedSum: snarkyjs_1.Poseidon.hash([sum]),
+            sum,
+        });
+    }
+    static assertEquals(state1, state2) {
+        state1.hashedSum.assertEquals(state2.hashedSum);
+        state1.sum.assertEquals(state2.sum);
+    }
+}
+exports.RollupState = RollupState;
+exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
+    publicInput: RollupState,
+    publicOutput: snarkyjs_1.Empty,
+    methods: {
+        oneStep: {
+            privateInputs: [],
+            method(state) {
+                const computedState = RollupState.createOneStep(state.sum);
+                RollupState.assertEquals(state, computedState);
+                return undefined;
+            },
+        },
+        merge: {
+            privateInputs: [snarkyjs_1.SelfProof, snarkyjs_1.SelfProof],
+            method(newState, state1Proof, state2Proof) {
+                state1Proof.verify();
+                state2Proof.verify();
+                const expectedSum = state1Proof.publicInput.sum.add(state2Proof.publicInput.sum);
+                newState.sum.equals(expectedSum);
+                newState.hashedSum.equals(snarkyjs_1.Poseidon.hash([expectedSum]));
+                return undefined;
+            },
+        },
+    },
+});
+class RollupProof extends snarkyjs_1.Experimental.ZkProgram.Proof(exports.Rollup) {
+}
+exports.RollupProof = RollupProof;
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
 /***/ 599:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.reducer = exports.MyProof = exports.RecursiveProgram = exports.PublicInput = void 0;
+exports.reducer = void 0;
 const readline_1 = __webpack_require__(521);
-const snarkyjs_1 = __webpack_require__(476);
-class PublicInput extends (0, snarkyjs_1.Struct)({
-    sum: snarkyjs_1.Field,
-    number: snarkyjs_1.Field,
-}) {
-}
-exports.PublicInput = PublicInput;
-exports.RecursiveProgram = snarkyjs_1.Experimental.ZkProgram({
-    publicInput: PublicInput,
-    publicOutput: snarkyjs_1.Field,
-    methods: {
-        init: {
-            privateInputs: [],
-            method(publicInput) {
-                const { sum, number } = publicInput;
-                sum.assertEquals(snarkyjs_1.Field.from(0));
-                return snarkyjs_1.Poseidon.hash([sum.add(number)]);
-            },
-        },
-        step: {
-            privateInputs: [snarkyjs_1.SelfProof],
-            method(publicInput, earlierProof) {
-                earlierProof.verify();
-                const { number, sum } = publicInput;
-                const { sum: earlierSum } = earlierProof.publicInput;
-                sum.assertEquals(earlierSum.add(number));
-                const newSum = earlierSum.add(number);
-                const hash = snarkyjs_1.Poseidon.hash([newSum]);
-                return hash;
-            },
-        },
-    },
-});
-class MyProof extends snarkyjs_1.Experimental.ZkProgram.Proof(exports.RecursiveProgram) {
-}
-exports.MyProof = MyProof;
-const reducer = () => {
+const common_1 = __webpack_require__(587);
+let accumulatedProof;
+const processData = async (line) => {
+    const [, proofString] = line.split('\t');
+    const proof = common_1.RollupProof.fromJSON(JSON.parse(proofString));
+    if (!accumulatedProof) {
+        accumulatedProof = proof;
+        return;
+    }
+    const currentState = new common_1.RollupState({
+        hashedSum: accumulatedProof.publicInput.hashedSum,
+        sum: accumulatedProof.publicInput.sum,
+    });
+    const newState = common_1.RollupState.createMerged(currentState, new common_1.RollupState({
+        hashedSum: proof.publicInput.hashedSum,
+        sum: proof.publicInput.sum,
+    }));
+    accumulatedProof = await common_1.Rollup.merge(newState, accumulatedProof, proof);
+};
+const reducer = async () => {
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
-    // variable used as an accumulator
-    const summary = {
-        proof: '',
-        sum: 0,
-        number: 0,
-        hash: '',
-    };
-    const processData = async (line) => {
-        const [, val] = line.split('\t');
-        const [_num, _sum, proof] = val.split(' ');
-        console.log('>>>>>>REDUCE STEP START: ', val);
-        const num = parseInt(_num);
-        const sum = parseInt(_sum);
-        const newSum = num + sum + summary.sum;
-        const publicInput = new PublicInput({
-            sum: (0, snarkyjs_1.Field)(newSum),
-            number: (0, snarkyjs_1.Field)(num),
-        });
-        let _proof;
-        if (!proof && !summary.proof) {
-            // this is the first line of the reduce step
-            _proof = await exports.RecursiveProgram.init(publicInput);
-        }
-        else if (proof && !summary.proof) {
-            // this is the first line of a combine step
-            _proof = await exports.RecursiveProgram.step(publicInput, MyProof.fromJSON(JSON.parse(proof)));
-        }
-        else {
-            // this is within the reduce
-            _proof = await exports.RecursiveProgram.step(publicInput, MyProof.fromJSON(JSON.parse(summary.proof)));
-        }
-        summary.proof = JSON.stringify(_proof.toJSON());
-        summary.sum = newSum;
-        summary.number = num;
-        summary.hash = _proof.publicOutput.toString();
-        console.log('>>>>>>REDUCE STEP DONE: ', JSON.stringify(summary));
-    };
     const queue = [];
     let closed = false;
-    const runProving = async () => {
-        await exports.RecursiveProgram.compile();
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            const line = queue.shift();
-            if (line) {
-                await processData(line);
-            }
-            else if (closed) {
-                const { number, sum, proof } = summary;
-                process.stdout.write(`${number} ${sum} ${proof}`);
-                return;
-            }
-        }
-    };
-    runProving();
+    await common_1.Rollup.compile();
     // fire an event on each line read from RL
     rl.on('line', async (line) => {
         queue.push(line);
@@ -128,6 +121,18 @@ const reducer = () => {
     rl.on('close', () => {
         closed = true;
     });
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        const line = queue.shift();
+        if (line) {
+            await processData(line);
+        }
+        else if (closed) {
+            const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+            process.stdout.write(accumulatedProofString);
+            return;
+        }
+    }
 };
 exports.reducer = reducer;
 //# sourceMappingURL=reducer.js.map

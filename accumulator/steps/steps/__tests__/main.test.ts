@@ -6,18 +6,15 @@ import { Poseidon, Field, verify } from 'snarkyjs';
 import { stdin as mockProcessStdin, MockSTDIN } from 'mock-stdin';
 
 import { mapper } from '../src/mapper/mapper';
-import {
-  reducer,
-  RecursiveProgram,
-  RecursiveProof,
-} from '../src/reducer/reducer';
+import { reducer } from '../src/reducer/reducer';
+import { Rollup, RollupProof } from '../src/common';
 
 describe.skip('test map reduce', () => {
   let verificationKey: string;
   let mockStdin: MockSTDIN;
   beforeAll(async () => {
     mockStdin = mockProcessStdin();
-    const compiled = await RecursiveProgram.compile();
+    const compiled = await Rollup.compile();
     verificationKey = compiled.verificationKey;
     console.log('verificationKey', verificationKey);
   }, 1000 * 60 * 10);
@@ -42,7 +39,7 @@ describe.skip('test map reduce', () => {
     stdout.on('line', (line) => (result = line));
     await reducer();
 
-    const finalProof = RecursiveProof.fromJSON(JSON.parse(result));
+    const finalProof = RollupProof.fromJSON(JSON.parse(result));
 
     expect(finalProof.publicOutput).toBe(Poseidon.hash([Field(6)]));
     expect(await verify(finalProof, verificationKey)).toBe(true);

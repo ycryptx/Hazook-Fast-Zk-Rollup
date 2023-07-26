@@ -1,23 +1,23 @@
 import { createInterface } from 'readline';
+import { Field } from 'snarkyjs';
+import { Rollup, RollupState } from '../common';
 
-export const mapper = (): void => {
+export const mapper = async (): Promise<void> => {
   let key = 0;
 
   const rl = createInterface({
     input: process.stdin,
   });
 
-  const parse = (line: string): string => {
-    // "number sum proof"
-    const sum = 0;
-    const proof = '';
-    return `${line} ${sum} ${proof}`;
-  };
+  await Rollup.compile();
 
-  // fire an event on each line read from RL
-  rl.on('line', (line) => {
-    const val = parse(line);
-    process.stdout.write(`${key}\t${val}\n`);
+  for await (const line of rl) {
+    const number = parseInt(line);
+
+    const state = RollupState.createOneStep(Field(number));
+    const proof = await Rollup.oneStep(state);
+    const proofString = JSON.stringify(proof.toJSON());
+    process.stdout.write(`${key}\t${proofString}\n`);
     key += 1;
-  });
+  }
 };
