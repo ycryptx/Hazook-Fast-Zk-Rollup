@@ -142,7 +142,7 @@ export class MapReduceClient {
             TargetOnDemandCapacity: 1, // Number of master instances
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.xlarge', // Master instance type
+                InstanceType: 'm5.8xlarge', // Master instance type
               },
             ],
           },
@@ -151,7 +151,7 @@ export class MapReduceClient {
             TargetOnDemandCapacity: 1, // Number of core instances
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.xlarge', // Core instance type
+                InstanceType: 'm5.8xlarge', // Core instance type
               },
             ],
           },
