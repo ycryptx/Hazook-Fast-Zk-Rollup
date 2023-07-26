@@ -19,6 +19,80 @@ module.exports = require("readline");
 /***/ }),
 
 /***/ 587:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(392), exports);
+__exportStar(__webpack_require__(269), exports);
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 269:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Processor = void 0;
+const readline_1 = __webpack_require__(521);
+class Processor {
+    rl;
+    queue;
+    closed;
+    accumulator;
+    onNewLine;
+    onClosed;
+    constructor(onNewLineFn, onClosedFn) {
+        this.rl = (0, readline_1.createInterface)({
+            input: process.stdin,
+        });
+        this.queue = [];
+        this.closed = false;
+        this.onNewLine = onNewLineFn;
+        this.onClosed = onClosedFn;
+        // on every new input add to the queue for asynchronous processing
+        this.rl.on('line', async (line) => {
+            this.queue.push(line);
+        });
+        // take note when there's no more input
+        this.rl.on('close', () => {
+            this.closed = true;
+        });
+    }
+    async run() {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const line = this.queue.shift();
+            if (line) {
+                this.accumulator = await this.onNewLine(line, this.accumulator);
+            }
+            else if (this.closed) {
+                return this.onClosed(this.accumulator);
+            }
+        }
+    }
+}
+exports.Processor = Processor;
+//# sourceMappingURL=processor.js.map
+
+/***/ }),
+
+/***/ 392:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -76,7 +150,7 @@ exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
 class RollupProof extends snarkyjs_1.Experimental.ZkProgram.Proof(exports.Rollup) {
 }
 exports.RollupProof = RollupProof;
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=rollup.js.map
 
 /***/ }),
 
@@ -86,23 +160,28 @@ exports.RollupProof = RollupProof;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mapper = void 0;
-const readline_1 = __webpack_require__(521);
 const snarkyjs_1 = __webpack_require__(476);
 const common_1 = __webpack_require__(587);
-const mapper = async () => {
-    let key = 0;
-    const rl = (0, readline_1.createInterface)({
-        input: process.stdin,
-    });
-    await common_1.Rollup.compile();
-    for await (const line of rl) {
-        const number = parseInt(line);
-        const state = common_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
-        const proof = await common_1.Rollup.oneStep(state);
-        const proofString = JSON.stringify(proof.toJSON());
-        process.stdout.write(`${key}\t${proofString}\n`);
-        key += 1;
+const onNewLine = async (line, key) => {
+    if (!key) {
+        key = 0;
     }
+    const number = parseInt(line);
+    const state = common_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
+    const proof = await common_1.Rollup.oneStep(state);
+    const proofString = JSON.stringify(proof.toJSON());
+    const mapOutput = `${key}\t${proofString}\n`;
+    console.log('MAPPER: ', mapOutput);
+    process.stdout.write(mapOutput);
+    return key + 1;
+};
+const onClosed = async () => {
+    return;
+};
+const mapper = async () => {
+    await common_1.Rollup.compile();
+    const processor = new common_1.Processor(onNewLine, onClosed);
+    await processor.run();
 };
 exports.mapper = mapper;
 //# sourceMappingURL=mapper.js.map
@@ -129,7 +208,7 @@ exports.mapper = mapper;
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;

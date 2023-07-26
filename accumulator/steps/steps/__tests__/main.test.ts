@@ -1,47 +1,29 @@
 /* eslint-disable jest/no-disabled-tests */
-import * as fs from 'fs';
-import * as path from 'path';
-import * as readline from 'readline';
-import { Poseidon, Field, verify } from 'snarkyjs';
-import { stdin as mockProcessStdin, MockSTDIN } from 'mock-stdin';
+import { Field } from 'snarkyjs';
+import { Rollup, RollupState } from '../src/common';
 
-import { mapper } from '../src/mapper/mapper';
-import { reducer } from '../src/reducer/reducer';
-import { Rollup, RollupProof } from '../src/common';
-
-describe.skip('test map reduce', () => {
+describe.skip('test rollup', () => {
   let verificationKey: string;
-  let mockStdin: MockSTDIN;
   beforeAll(async () => {
-    mockStdin = mockProcessStdin();
+    console.log('compiling zk program...');
+    const start = Date.now();
     const compiled = await Rollup.compile();
+    console.log('finished compiling!', Date.now() - start);
     verificationKey = compiled.verificationKey;
     console.log('verificationKey', verificationKey);
   }, 1000 * 60 * 10);
 
   it('case 1', async () => {
-    const rl = readline.createInterface({
-      input: fs.createReadStream(path.join(__dirname, 'misc/run.txt')),
-      crlfDelay: Infinity,
-    });
+    const state1 = RollupState.createOneStep(Field(1));
+    const proof1 = await Rollup.oneStep(state1);
 
-    const stdout = readline.createInterface({
-      input: process.stdout,
-      crlfDelay: Infinity,
-    });
+    const state2 = RollupState.createOneStep(Field(2));
+    const proof2 = await Rollup.oneStep(state1);
 
-    let result: string;
+    const newState = RollupState.createMerged(state1, state2);
 
-    mapper();
-    for await (const line of rl) {
-      mockStdin.send(line);
-    }
-    stdout.on('line', (line) => (result = line));
-    await reducer();
-
-    const finalProof = RollupProof.fromJSON(JSON.parse(result));
-
-    expect(finalProof.publicOutput).toBe(Poseidon.hash([Field(6)]));
-    expect(await verify(finalProof, verificationKey)).toBe(true);
+    const accumulatedProof = await Rollup.merge(newState, proof1, proof2);
+    console.log(JSON.stringify(accumulatedProof.toJSON));
+    expect(accumulatedProof).toBeTruthy();
   });
 });

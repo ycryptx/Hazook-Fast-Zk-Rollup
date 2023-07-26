@@ -1,16 +1,15 @@
-import { createInterface } from 'readline';
-import { Rollup, RollupProof, RollupState } from '../common';
+import { Rollup, RollupProof, RollupState, Processor } from '../common';
 
-let accumulatedProof: RollupProof;
-
-const processData = async (line: string): Promise<void> => {
+const onNewLine = async (
+  line: string,
+  accumulatedProof: RollupProof,
+): Promise<RollupProof> => {
   const [, proofString] = line.split('\t');
 
   const proof = RollupProof.fromJSON(JSON.parse(proofString));
 
   if (!accumulatedProof) {
-    accumulatedProof = proof;
-    return;
+    return proof;
   }
 
   const currentState = new RollupState({
@@ -26,39 +25,26 @@ const processData = async (line: string): Promise<void> => {
     }),
   );
 
+  console.log('REDUCER MERGING');
+
   accumulatedProof = await Rollup.merge(newState, accumulatedProof, proof);
+
+  console.log(
+    'REDUCER ACCUMULATED PROOF:',
+    JSON.stringify(accumulatedProof.toJSON()),
+  );
+
+  return accumulatedProof;
+};
+
+const onClosed = async (accumulatedProof: RollupProof): Promise<void> => {
+  const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+  process.stdout.write(accumulatedProofString);
+  return;
 };
 
 export const reducer = async (): Promise<void> => {
-  const rl = createInterface({
-    input: process.stdin,
-  });
-
-  const queue = [] as string[];
-
-  let closed = false;
-
   await Rollup.compile();
-
-  // fire an event on each line read from RL
-  rl.on('line', async (line) => {
-    queue.push(line);
-  });
-
-  // final event when the file is closed, to flush the final accumulated value
-  rl.on('close', () => {
-    closed = true;
-  });
-
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const line = queue.shift();
-    if (line) {
-      await processData(line);
-    } else if (closed) {
-      const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
-      process.stdout.write(accumulatedProofString);
-      return;
-    }
-  }
+  const processor = new Processor<RollupProof>(onNewLine, onClosed);
+  await processor.run();
 };

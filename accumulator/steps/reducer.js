@@ -19,6 +19,80 @@ module.exports = require("readline");
 /***/ }),
 
 /***/ 587:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(392), exports);
+__exportStar(__webpack_require__(269), exports);
+//# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 269:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Processor = void 0;
+const readline_1 = __webpack_require__(521);
+class Processor {
+    rl;
+    queue;
+    closed;
+    accumulator;
+    onNewLine;
+    onClosed;
+    constructor(onNewLineFn, onClosedFn) {
+        this.rl = (0, readline_1.createInterface)({
+            input: process.stdin,
+        });
+        this.queue = [];
+        this.closed = false;
+        this.onNewLine = onNewLineFn;
+        this.onClosed = onClosedFn;
+        // on every new input add to the queue for asynchronous processing
+        this.rl.on('line', async (line) => {
+            this.queue.push(line);
+        });
+        // take note when there's no more input
+        this.rl.on('close', () => {
+            this.closed = true;
+        });
+    }
+    async run() {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const line = this.queue.shift();
+            if (line) {
+                this.accumulator = await this.onNewLine(line, this.accumulator);
+            }
+            else if (this.closed) {
+                return this.onClosed(this.accumulator);
+            }
+        }
+    }
+}
+exports.Processor = Processor;
+//# sourceMappingURL=processor.js.map
+
+/***/ }),
+
+/***/ 392:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -76,7 +150,7 @@ exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
 class RollupProof extends snarkyjs_1.Experimental.ZkProgram.Proof(exports.Rollup) {
 }
 exports.RollupProof = RollupProof;
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=rollup.js.map
 
 /***/ }),
 
@@ -86,15 +160,12 @@ exports.RollupProof = RollupProof;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reducer = void 0;
-const readline_1 = __webpack_require__(521);
 const common_1 = __webpack_require__(587);
-let accumulatedProof;
-const processData = async (line) => {
+const onNewLine = async (line, accumulatedProof) => {
     const [, proofString] = line.split('\t');
     const proof = common_1.RollupProof.fromJSON(JSON.parse(proofString));
     if (!accumulatedProof) {
-        accumulatedProof = proof;
-        return;
+        return proof;
     }
     const currentState = new common_1.RollupState({
         hashedSum: accumulatedProof.publicInput.hashedSum,
@@ -104,35 +175,20 @@ const processData = async (line) => {
         hashedSum: proof.publicInput.hashedSum,
         sum: proof.publicInput.sum,
     }));
+    console.log('REDUCER MERGING');
     accumulatedProof = await common_1.Rollup.merge(newState, accumulatedProof, proof);
+    console.log('REDUCER ACCUMULATED PROOF:', JSON.stringify(accumulatedProof.toJSON()));
+    return accumulatedProof;
+};
+const onClosed = async (accumulatedProof) => {
+    const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+    process.stdout.write(accumulatedProofString);
+    return;
 };
 const reducer = async () => {
-    const rl = (0, readline_1.createInterface)({
-        input: process.stdin,
-    });
-    const queue = [];
-    let closed = false;
     await common_1.Rollup.compile();
-    // fire an event on each line read from RL
-    rl.on('line', async (line) => {
-        queue.push(line);
-    });
-    // final event when the file is closed, to flush the final accumulated value
-    rl.on('close', () => {
-        closed = true;
-    });
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        const line = queue.shift();
-        if (line) {
-            await processData(line);
-        }
-        else if (closed) {
-            const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
-            process.stdout.write(accumulatedProofString);
-            return;
-        }
-    }
+    const processor = new common_1.Processor(onNewLine, onClosed);
+    await processor.run();
 };
 exports.reducer = reducer;
 //# sourceMappingURL=reducer.js.map
@@ -159,7 +215,7 @@ exports.reducer = reducer;
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;

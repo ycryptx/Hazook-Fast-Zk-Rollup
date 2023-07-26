@@ -10,7 +10,7 @@
     "rootDir": ".",
     "outDir": "build",
     "allowSyntheticDefaultImports": true,
-    "importHelpers": true,
+    "importHelpers": false,
     "alwaysStrict": true,
     "sourceMap": true,
     "forceConsistentCasingInFileNames": true,
