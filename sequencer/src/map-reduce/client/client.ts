@@ -139,28 +139,17 @@ export class MapReduceClient {
         {
           Classification: 'mapred-site',
           Properties: {
-            'mapreduce.map.memory.mb': '10240', // Set the memory for each mapper task to 10GB (in MB)
-            // enable NUMA
-            'mapreduce.reduce.java.opts': '-XX:+UseNUMA',
-            'mapreduce.map.java.opts': '-XX:+UseNUMA',
+            'mapreduce.map.memory.mb': '10240', // Set the memory for each mapper task to 5GB (in MB)
           },
         },
         {
           Classification: 'yarn-site',
           Properties: {
-            'yarn.nodemanager.resource.memory-mb': '12288', // Set the total memory available to YARN on the master node to 12GB (in MB)
-            'yarn.scheduler.maximum-allocation-mb': '12288', // Set the maximum memory allocation for a single container to 12GB (in MB)
-            // the below properties are used to enable NUMA
-            'yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user':
-              'yarn',
-            'yarn.nodemanager.linux-container-executor.group': 'yarn',
-            'yarn.nodemanager.container-executor.class':
-              'org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor',
-            'yarn.nodemanager.numa-awareness.enabled': 'true',
-            'yarn.nodemanager.numa-awareness.numactl.cmd': '/usr/bin/numactl',
-            'yarn.nodemanager.numa-awareness.read-topology': 'true',
+            'yarn.nodemanager.resource.memory-mb': '12288', // Set the total memory available to YARN on the master node to 28GB (in MB)
+            'yarn.scheduler.maximum-allocation-mb': '12288', // Set the maximum memory allocation for a single container to 28GB (in MB)
           },
         },
+        // Add any other YARN or Hadoop configurations you require
       ],
       Instances: {
         InstanceFleets: [
