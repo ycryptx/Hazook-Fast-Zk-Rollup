@@ -135,18 +135,34 @@ export class MapReduceClient {
       ReleaseLabel: 'emr-6.11.0', // EMR release version
       ServiceRole: 'EMR_DefaultRole',
       JobFlowRole: 'emr-ec2-profile',
+      // Configurations: [
+      //   {
+      //     Classification: 'mapred-site',
+      //     Properties: {
+      //       'mapreduce.map.memory.mb': '10000',
+      //       'mapreduce.reduce.memory.mb': '4000',
+      //     },
+      //   },
+      //   {
+      //     Classification: 'yarn-site',
+      //     Properties: {},
+      //   },
+      // ],
       Configurations: [
         {
           Classification: 'mapred-site',
           Properties: {
-            'mapreduce.map.memory.mb': '10000',
-            'mapreduce.reduce.memory.mb': '4000',
+            'mapreduce.map.memory.mb': '5120', // Set the memory for each mapper task to 5GB (in MB)
           },
         },
         {
           Classification: 'yarn-site',
-          Properties: {},
+          Properties: {
+            'yarn.nodemanager.resource.memory-mb': '28672', // Set the total memory available to YARN on the master node to 28GB (in MB)
+            'yarn.scheduler.maximum-allocation-mb': '28672', // Set the maximum memory allocation for a single container to 28GB (in MB)
+          },
         },
+        // Add any other YARN or Hadoop configurations you require
       ],
       Instances: {
         InstanceFleets: [
