@@ -26,14 +26,7 @@ const onNewLine = async (
     }),
   );
 
-  console.log('REDUCER MERGING');
-
   accumulatedProof = await Rollup.merge(newState, accumulatedProof, proof);
-
-  console.log(
-    'REDUCER ACCUMULATED PROOF:',
-    JSON.stringify(accumulatedProof.toJSON()),
-  );
 
   return accumulatedProof;
 };
