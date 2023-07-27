@@ -66,7 +66,7 @@ class Processor {
         this.onNewLine = onNewLineFn;
         this.onClosed = onClosedFn;
         // on every new input add to the queue for asynchronous processing
-        this.rl.on('line', async (line) => {
+        this.rl.on('line', (line) => {
             this.queue.push(line);
         });
         // take note when there's no more input
@@ -161,27 +161,38 @@ exports.RollupProof = RollupProof;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mapper = void 0;
 const snarkyjs_1 = __webpack_require__(476);
+const readline_1 = __webpack_require__(521);
 const common_1 = __webpack_require__(587);
-const onNewLine = async (line, key) => {
-    if (!key) {
-        key = 0;
-    }
-    const number = parseInt(line);
-    const state = common_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
-    const proof = await common_1.Rollup.oneStep(state);
-    const proofString = JSON.stringify(proof.toJSON());
-    const mapOutput = `${key}\t${proofString}\n`;
-    console.log('MAPPER: ', mapOutput);
-    process.stdout.write(mapOutput);
-    return key + 1;
-};
-const onClosed = async () => {
-    return;
-};
+// const onNewLine = async (line: string, key: number): Promise<number> => {
+//   if (!key) {
+//     key = 0;
+//   }
+//   const number = parseInt(line);
+//   const state = RollupState.createOneStep(Field(number));
+//   const proof = await Rollup.oneStep(state);
+//   const proofString = JSON.stringify(proof.toJSON());
+//   const mapOutput = `${key}\t${proofString}\n`;
+//   process.stdout.write(mapOutput);
+//   return key + 1;
+// };
+// const onClosed = async (): Promise<void> => {
+//   return;
+// };
 const mapper = async () => {
     await common_1.Rollup.compile();
-    const processor = new common_1.Processor(onNewLine, onClosed);
-    await processor.run();
+    let key = 0;
+    const rl = (0, readline_1.createInterface)({
+        input: process.stdin,
+    });
+    for await (const line of rl) {
+        const number = parseInt(line);
+        const state = common_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
+        const proof = await common_1.Rollup.oneStep(state);
+        const proofString = JSON.stringify(proof.toJSON());
+        const mapOutput = `${key}\t${proofString}\n`;
+        process.stdout.write(mapOutput);
+        key += 1;
+    }
 };
 exports.mapper = mapper;
 //# sourceMappingURL=mapper.js.map

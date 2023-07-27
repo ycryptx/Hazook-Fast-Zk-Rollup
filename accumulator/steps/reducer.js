@@ -66,7 +66,7 @@ class Processor {
         this.onNewLine = onNewLineFn;
         this.onClosed = onClosedFn;
         // on every new input add to the queue for asynchronous processing
-        this.rl.on('line', async (line) => {
+        this.rl.on('line', (line) => {
             this.queue.push(line);
         });
         // take note when there's no more input
@@ -160,6 +160,7 @@ exports.RollupProof = RollupProof;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reducer = void 0;
+const readline_1 = __webpack_require__(521);
 const common_1 = __webpack_require__(587);
 const onNewLine = async (line, accumulatedProof) => {
     const [, proofString] = line.split('\t');
@@ -187,8 +188,14 @@ const onClosed = async (accumulatedProof) => {
 };
 const reducer = async () => {
     await common_1.Rollup.compile();
-    const processor = new common_1.Processor(onNewLine, onClosed);
-    await processor.run();
+    let rollupProof;
+    const rl = (0, readline_1.createInterface)({
+        input: process.stdin,
+    });
+    for await (const line of rl) {
+        rollupProof = await onNewLine(line, rollupProof);
+    }
+    return onClosed(rollupProof);
 };
 exports.reducer = reducer;
 //# sourceMappingURL=reducer.js.map

@@ -21,7 +21,7 @@ export class Processor<T> {
     this.onClosed = onClosedFn;
 
     // on every new input add to the queue for asynchronous processing
-    this.rl.on('line', async (line) => {
+    this.rl.on('line', (line) => {
       this.queue.push(line);
     });
 

@@ -1,4 +1,5 @@
-import { Rollup, RollupProof, RollupState, Processor } from '../common';
+import { createInterface } from 'readline';
+import { Rollup, RollupProof, RollupState } from '../common';
 
 const onNewLine = async (
   line: string,
@@ -45,6 +46,14 @@ const onClosed = async (accumulatedProof: RollupProof): Promise<void> => {
 
 export const reducer = async (): Promise<void> => {
   await Rollup.compile();
-  const processor = new Processor<RollupProof>(onNewLine, onClosed);
-  await processor.run();
+
+  let rollupProof: RollupProof;
+  const rl = createInterface({
+    input: process.stdin,
+  });
+
+  for await (const line of rl) {
+    rollupProof = await onNewLine(line, rollupProof);
+  }
+  return onClosed(rollupProof);
 };

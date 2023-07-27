@@ -135,23 +135,38 @@ export class MapReduceClient {
       ReleaseLabel: 'emr-6.11.0', // EMR release version
       ServiceRole: 'EMR_DefaultRole',
       JobFlowRole: 'emr-ec2-profile',
+      Configurations: [
+        {
+          Classification: 'mapred-site',
+          Properties: {
+            'mapreduce.map.memory.mb': '10000',
+            'mapreduce.reduce.memory.mb': '4000',
+          },
+        },
+        {
+          Classification: 'yarn-site',
+          Properties: {},
+        },
+      ],
       Instances: {
         InstanceFleets: [
           {
             InstanceFleetType: 'MASTER',
-            TargetOnDemandCapacity: 1, // Number of master instances
+            TargetSpotCapacity: 1,
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.xlarge', // Master instance type
+                InstanceType: 'm5.2xlarge', // Master instance type
+                BidPrice: '0.5',
               },
             ],
           },
           {
             InstanceFleetType: 'CORE',
-            TargetOnDemandCapacity: 1, // Number of core instances
+            TargetSpotCapacity: 1, // Number of core instances
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.xlarge', // Core instance type
+                InstanceType: 'm5.2xlarge', // Core instance type
+                BidPrice: '0.5',
               },
             ],
           },
