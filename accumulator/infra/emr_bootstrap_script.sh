@@ -23,8 +23,8 @@ ls $NODE_PATH
 sudo yum -y install numactl
 echo 1 | sudo tee /proc/sys/kernel/numa_balancing
 
-echo "banned.users=mapred,bin,hdfs" >> /etc/hadoop/conf/container-executor.cfg
-rm -rf /var/log/hadoop-yarn/ 
+sudo echo "banned.users=mapred,bin,hdfs" >> /etc/hadoop/conf/container-executor.cfg
+sudo rm -rf /var/log/hadoop-yarn/ 
 sudo chown -R yarn:hadoop /var/log/hadoop-yarn/
 sudo chmod 755 -R /var/log/hadoop-yarn/
 
