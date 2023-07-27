@@ -140,6 +140,7 @@ export class MapReduceClient {
           Classification: 'mapred-site',
           Properties: {
             'mapreduce.map.memory.mb': '10240', // Set the memory for each mapper task to 5GB (in MB)
+            'mapreduce.map.java.opts': '-Xmx5120m',
           },
         },
         {
