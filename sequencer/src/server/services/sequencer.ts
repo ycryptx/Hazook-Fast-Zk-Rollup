@@ -28,19 +28,25 @@ class Sequencer implements SequencerServiceImplementation {
 
     const start = Date.now();
 
+    let inputLength = 0;
+
     switch (request.case) {
       case Case.CASE_RUN_UNSPECIFIED:
       case Case.CASE_RUN_1:
         inputFile = 'data/run1.txt';
+        inputLength = 8;
         break;
       case Case.CASE_RUN_2:
         inputFile = 'data/run2.txt';
+        inputLength = 64;
         break;
       case Case.CASE_RUN_3:
         inputFile = 'data/run3.txt';
+        inputLength = 256;
         break;
       case Case.CASE_RUN_4:
         inputFile = 'data/run4.txt';
+        inputLength = 16384;
         break;
       default:
     }
@@ -50,7 +56,7 @@ class Sequencer implements SequencerServiceImplementation {
     const inputLocation = await mapReduce.upload(absPathInputFile);
 
     // start Hadoop map-reduce operation
-    response.result = await mapReduce.process(inputLocation);
+    response.result = await mapReduce.process(inputLocation, inputLength);
 
     const end = Date.now();
 

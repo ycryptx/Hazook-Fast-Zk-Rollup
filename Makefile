@@ -36,7 +36,7 @@ generate-demo-data:
 	for number in {0..255} ; do \
     	echo $$number >> sequencer/data/run3.txt; \
 	done
-	for number in {0..2047} ; do \
+	for number in {0..16383} ; do \
     	echo $$number >> sequencer/data/run4.txt; \
 	done
 

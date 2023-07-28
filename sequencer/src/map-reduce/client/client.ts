@@ -39,10 +39,10 @@ export class MapReduceClient {
    * @param inputFile the location of the input file that Map-Reduce should process
    * @returns the result of the MapReduce
    */
-  async process(inputFile: string): Promise<string> {
+  async process(inputFile: string, inputLength: number): Promise<string> {
     return this.mode == Mode.LOCAL
       ? this.processLocal(inputFile)
-      : this.processEmr(inputFile);
+      : this.processEmr(inputFile, inputLength);
   }
 
   private async processLocal(inputFile: string): Promise<string> {
@@ -75,7 +75,10 @@ export class MapReduceClient {
     return (hadoopResult || '').toString().trim();
   }
 
-  private async processEmr(inputFile: string): Promise<string> {
+  private async processEmr(
+    inputFile: string,
+    inputLength: number,
+  ): Promise<string> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({
@@ -109,6 +112,10 @@ export class MapReduceClient {
               'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
+              // TODO: remove the below comment per the comment below
+              '-D',
+              `mapreduce.input.lineinputformat.linespermap=${inputLength / 4}`,
+              //
               '-input',
               `s3://${inputFile}`,
               '-output',
@@ -117,6 +124,11 @@ export class MapReduceClient {
               'mapper.js',
               '-reducer',
               'reducer.js',
+              // TODO: remove the below args once https://github.com/o1-labs/snarkyjs/issues/951 is implemented.
+              // The default AWS EMR inputSplit is on every line. That means that if we have an input with 1600 lines
+              // we compile the contract 1600 times (!). So we're setting a larger input split to reduce this overhead
+              '-inputformat',
+              'org.apache.hadoop.mapreduce.lib.input.NLineInputFormat',
             ],
           },
           ActionOnFailure: 'CONTINUE',
