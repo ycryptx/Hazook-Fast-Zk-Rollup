@@ -128,7 +128,7 @@ export class MapReduceClient {
               // The default AWS EMR inputSplit is on every line. That means that if we have an input with 1600 lines
               // we compile the contract 1600 times (!). So we're setting a larger input split to reduce this overhead
               '-inputformat',
-              'org.apache.hadoop.mapreduce.lib.input.NLineInputFormat',
+              'org.apache.hadoop.mapred.lib.NLineInputFormat',
             ],
           },
           ActionOnFailure: 'CONTINUE',
