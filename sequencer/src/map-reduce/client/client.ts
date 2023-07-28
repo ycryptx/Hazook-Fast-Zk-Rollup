@@ -192,7 +192,7 @@ export class MapReduceClient {
             TargetSpotCapacity: 1,
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.large', // Master instance type
+                InstanceType: 'm5.xlarge', // Master instance type
                 BidPrice: '0.5',
               },
             ],
