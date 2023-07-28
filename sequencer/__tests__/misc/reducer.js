@@ -11,7 +11,7 @@ const summary = {
     count: 0,
 };
 const processData = (line) => {
-    const [, val] = line.split('\t');
+    const [,, val] = line.split('\t');
     const num = parseInt(val);
     summary.count += num;
 };
