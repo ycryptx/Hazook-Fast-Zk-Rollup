@@ -164,6 +164,9 @@ const readline_1 = __webpack_require__(521);
 const common_1 = __webpack_require__(587);
 const onNewLine = async (line, accumulatedProof) => {
     const [, proofString] = line.split('\t');
+    if (!proofString) {
+        return accumulatedProof;
+    }
     const proof = common_1.RollupProof.fromJSON(JSON.parse(proofString));
     if (!accumulatedProof) {
         return proof;
@@ -176,9 +179,7 @@ const onNewLine = async (line, accumulatedProof) => {
         hashedSum: proof.publicInput.hashedSum,
         sum: proof.publicInput.sum,
     }));
-    console.log('REDUCER MERGING');
     accumulatedProof = await common_1.Rollup.merge(newState, accumulatedProof, proof);
-    console.log('REDUCER ACCUMULATED PROOF:', JSON.stringify(accumulatedProof.toJSON()));
     return accumulatedProof;
 };
 const onClosed = async (accumulatedProof) => {
