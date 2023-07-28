@@ -1,6 +1,6 @@
 import { Field } from 'snarkyjs';
 import { createInterface } from 'readline';
-import { Rollup, RollupState } from '../common';
+import { Rollup, RollupState } from '../rollup';
 
 export const mapper = async (): Promise<void> => {
   await Rollup.compile();

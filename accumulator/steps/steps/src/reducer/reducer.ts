@@ -1,5 +1,5 @@
 import { createInterface } from 'readline';
-import { Rollup, RollupProof, RollupState } from '../common';
+import { Rollup, RollupProof, RollupState } from '../rollup';
 
 const onNewLine = async (
   line: string,

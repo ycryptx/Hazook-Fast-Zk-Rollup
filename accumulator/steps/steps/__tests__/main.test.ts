@@ -2,7 +2,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Field } from 'snarkyjs';
-import { Rollup, RollupState, Processor } from '../src/common';
+import { Rollup, RollupState } from '../src/rollup';
+import { Processor } from '../src/processor';
 import { stdin, MockSTDIN } from 'mock-stdin';
 
 describe('test processor', () => {
