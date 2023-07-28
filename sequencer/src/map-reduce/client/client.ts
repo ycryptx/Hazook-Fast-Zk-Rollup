@@ -52,7 +52,19 @@ export class MapReduceClient {
 
     // initiate map-reduce
     runShellCommand(
-      `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js -input ${inputFile} -output ${outputDir}`,
+      `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
+        -D mapred.reduce.tasks=2 \
+        -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
+        -D mapreduce.partition.keycomparator.options=-k1,1n \
+        -D stream.num.map.output.key.fields=2 \
+        -D map.output.key.field.separator='\t' \
+        -D mapreduce.job.output.key.field.separator='\t' \
+        -D mapreduce.map.output.key.field.separator='\t' \
+        -D mapred.text.key.comparator.options=-k2,2n \
+        -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
+        -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
+        -input ${inputFile} \
+        -output ${outputDir}`,
     );
 
     // get result
@@ -161,6 +173,15 @@ export class MapReduceClient {
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
+            'mapred.reduce.tasks': '2',
+            'mapred.output.key.comparator.class':
+              'org.apache.hadoop.mapred.lib.KeyFieldBasedComparator',
+            'mapreduce.partition.keycomparator.options': '-k1,1n',
+            'stream.num.map.output.key.fields': '2',
+            'map.output.key.field.separator': '\t',
+            'mapreduce.job.output.key.field.separator': '\t',
+            'mapreduce.map.output.key.field.separator': '\t',
+            'mapred.text.key.comparator.options': '-k2,2n',
           },
         },
       ],

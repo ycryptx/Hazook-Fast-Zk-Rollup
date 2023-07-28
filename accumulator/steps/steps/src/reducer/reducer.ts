@@ -5,7 +5,7 @@ const onNewLine = async (
   line: string,
   accumulatedProof: RollupProof,
 ): Promise<RollupProof> => {
-  const [, proofString] = line.split('\t');
+  const [, , proofString] = line.split('\t');
 
   if (!proofString) {
     return accumulatedProof;

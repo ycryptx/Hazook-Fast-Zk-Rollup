@@ -27,7 +27,7 @@ exports.reducer = void 0;
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(438);
 const onNewLine = async (line, accumulatedProof) => {
-    const [, proofString] = line.split('\t');
+    const [, , proofString] = line.split('\t');
     if (!proofString) {
         return accumulatedProof;
     }

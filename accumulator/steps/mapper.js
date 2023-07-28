@@ -27,9 +27,16 @@ exports.mapper = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(438);
+const INPUT_SPLIT = process.env.mapreduce_map_input_start;
+const NUM_REDUCERS = parseInt(process.env.NUM_REDUCES);
+let currentReducer = 0;
+const deriveKey = () => {
+    const key = `${currentReducer}\t${INPUT_SPLIT}`;
+    currentReducer = (currentReducer + 1) % NUM_REDUCERS;
+    return key;
+};
 const mapper = async () => {
     await rollup_1.Rollup.compile();
-    let key = 0;
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
@@ -37,13 +44,13 @@ const mapper = async () => {
         if (!line) {
             continue;
         }
+        console.error('MAPPER: ', INPUT_SPLIT, NUM_REDUCERS);
         const number = parseInt(line);
         const state = rollup_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
         const proof = await rollup_1.Rollup.oneStep(state);
         const proofString = JSON.stringify(proof.toJSON());
-        const mapOutput = `${key}\t${proofString}\n`;
+        const mapOutput = `${deriveKey()}\t${proofString}\n`;
         process.stdout.write(mapOutput);
-        key += 1;
     }
 };
 exports.mapper = mapper;
