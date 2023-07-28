@@ -141,7 +141,7 @@ resource "aws_s3_object" "emr_bootstrap_script" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "emr_bootstrap_script.sh"
   source = "bootstrap_script"
-  etag = filemd5("bootstrap_script")
+  etag = filemd5("emr_bootstrap_script.sh")
 }
 
 resource "aws_s3_object" "emr_reducer" {
@@ -375,19 +375,19 @@ resource "aws_emr_cluster" "accumulator" {
 
   master_instance_group {
     instance_count = 1
-    instance_type = "m5a.xlarge"
+    instance_type = "m5a.2xlarge"
     # The spot market for this instance has been stable and under .15 for
     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
     # Note: we probably want a non-spot master node in production.
-    bid_price = 0.15
+    bid_price = 0.5
   }
 
   core_instance_group {
     instance_count = 1
-    instance_type  = "m5a.xlarge"
+    instance_type  = "m5a.2xlarge"
     # The spot market for this instance has been stable and under .15 for
     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
-    bid_price = 0.15
+    bid_price = 0.5
   }
 
   bootstrap_action {
