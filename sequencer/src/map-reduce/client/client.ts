@@ -66,7 +66,14 @@ export class MapReduceClient {
   private async processEmr(inputFile: string): Promise<string> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
-      new ListClustersCommand({ ClusterStates: [ClusterState.WAITING] }),
+      new ListClustersCommand({
+        ClusterStates: [
+          ClusterState.WAITING,
+          ClusterState.BOOTSTRAPPING,
+          ClusterState.STARTING,
+          ClusterState.RUNNING,
+        ],
+      }),
     );
 
     let clusterId: string;
