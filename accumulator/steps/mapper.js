@@ -28,7 +28,7 @@ const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(438);
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUM_REDUCERS = parseInt(process.env.NUM_REDUCES);
+const NUM_REDUCERS = 2;
 let currentReducer = 0;
 const deriveKey = () => {
     const key = `${currentReducer}\t${INPUT_SPLIT}`;
@@ -44,7 +44,6 @@ const mapper = async () => {
         if (!line) {
             continue;
         }
-        console.error('MAPPER: ', INPUT_SPLIT, NUM_REDUCERS);
         const number = parseInt(line);
         const state = rollup_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
         const proof = await rollup_1.Rollup.oneStep(state);
