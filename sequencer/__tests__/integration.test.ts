@@ -19,7 +19,7 @@ describe('integration tests', () => {
   it('1. demo-0: should sum numbers correctly', async () => {
     const dataFilePath = path.join(__dirname, 'misc/run.txt');
     const inputLocation = await mapReduce.upload(dataFilePath);
-    const mapReduceResult = await mapReduce.process(inputLocation);
+    const mapReduceResult = await mapReduce.process(inputLocation, 2);
 
     expect(
       mapReduceResult.split('\n').reduce((val: string, acc: string) => {
