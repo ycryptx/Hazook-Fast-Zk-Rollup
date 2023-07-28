@@ -183,7 +183,10 @@ const onNewLine = async (line, accumulatedProof) => {
     return accumulatedProof;
 };
 const onClosed = async (accumulatedProof) => {
-    const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+    let accumulatedProofString = '';
+    if (accumulatedProof) {
+        accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+    }
     process.stdout.write(accumulatedProofString);
     return;
 };

@@ -36,7 +36,10 @@ const onNewLine = async (
 };
 
 const onClosed = async (accumulatedProof: RollupProof): Promise<void> => {
-  const accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+  let accumulatedProofString = '';
+  if (accumulatedProof) {
+    accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+  }
   process.stdout.write(accumulatedProofString);
   return;
 };

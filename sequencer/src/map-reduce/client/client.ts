@@ -144,24 +144,25 @@ export class MapReduceClient {
       JobFlowRole: 'emr-ec2-profile',
       Configurations: [
         {
+          Classification: 'yarn-site',
+          Properties: {
+            'yarn.nodemanager.resource.cpu-vcores': '4', // Set the number of CPU cores allocated to each core node
+            'yarn.nodemanager.resource.memory-mb': '24576', // Set the amount of memory (in MB) allocated to each core node (24 GB)
+          },
+        },
+        {
           Classification: 'mapred-site',
           Properties: {
-            'mapreduce.map.memory.mb': '7168', // Set the memory for each mapper task to 7GB (in MB)
-            'mapreduce.reduce.memory.mb': '7168', // Set the memory for each mapper task to 7GB (in MB)
+            'mapreduce.map.cpu.vcores': '2', // Set the number of CPU cores allocated to each mapper task
+            'mapreduce.reduce.cpu.vcores': '2', // Set the number of CPU cores allocated to each reducer task
+            'mapreduce.map.memory.mb': '6144',
+            'mapreduce.reduce.memory.mb': '6144',
             'mapreduce.task.timeout': '0',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
           },
         },
-        {
-          Classification: 'yarn-site',
-          Properties: {
-            'yarn.nodemanager.resource.memory-mb': '28672', // Set the total memory available to YARN on the master node to 5GB (in MB)
-            'yarn.scheduler.maximum-allocation-mb': '28672', // Set the maximum memory allocation for a single container to 5GB (in MB)
-          },
-        },
-        // Add any other YARN or Hadoop configurations you require
       ],
       Instances: {
         InstanceFleets: [
@@ -170,14 +171,14 @@ export class MapReduceClient {
             TargetSpotCapacity: 1,
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.2xlarge', // Master instance type
+                InstanceType: 'm5.large', // Master instance type
                 BidPrice: '0.5',
               },
             ],
           },
           {
             InstanceFleetType: 'CORE',
-            TargetSpotCapacity: 1, // Number of core instances
+            TargetSpotCapacity: 2, // Number of core instances
             InstanceTypeConfigs: [
               {
                 InstanceType: 'm5.2xlarge', // Core instance type
