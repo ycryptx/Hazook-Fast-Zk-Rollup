@@ -7,6 +7,10 @@ const onNewLine = async (
 ): Promise<RollupProof> => {
   const [, proofString] = line.split('\t');
 
+  if (!proofString) {
+    return accumulatedProof;
+  }
+
   const proof = RollupProof.fromJSON(JSON.parse(proofString));
 
   if (!accumulatedProof) {
