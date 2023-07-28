@@ -142,12 +142,15 @@ export class MapReduceClient {
             'mapreduce.map.memory.mb': '7168', // Set the memory for each mapper task to 10GB (in MB)
             'mapreduce.task.timeout': '0',
             'mapreduce.task.profile': 'true',
+            'mapreduce.map.output.compress': 'true',
+            'mapreduce.map.output.compress.codec':
+              'org.apache.hadoop.io.compress.SnappyCodec',
           },
         },
         {
           Classification: 'yarn-site',
           Properties: {
-            'yarn.nodemanager.resource.memory-mb': '4096', // Set the total memory available to YARN on the master node to 5GB (in MB)
+            'yarn.nodemanager.resource.memory-mb': '28672', // Set the total memory available to YARN on the master node to 5GB (in MB)
             'yarn.scheduler.maximum-allocation-mb': '28672', // Set the maximum memory allocation for a single container to 5GB (in MB)
           },
         },
