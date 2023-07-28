@@ -146,9 +146,9 @@ export class MapReduceClient {
         {
           Classification: 'mapred-site',
           Properties: {
-            'mapreduce.map.memory.mb': '7168', // Set the memory for each mapper task to 10GB (in MB)
+            'mapreduce.map.memory.mb': '7168', // Set the memory for each mapper task to 7GB (in MB)
+            'mapreduce.reduce.memory.mb': '7168', // Set the memory for each mapper task to 7GB (in MB)
             'mapreduce.task.timeout': '0',
-            'mapreduce.task.profile': 'true',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
