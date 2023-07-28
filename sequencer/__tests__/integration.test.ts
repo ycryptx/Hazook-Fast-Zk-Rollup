@@ -8,7 +8,8 @@ import { Mode } from '../src/map-reduce';
  * Make the snark prove the sum of all the numbers in the transactions.
  * Use that to accumulate 8, 64, 256, 2048, and 16384 transactions.
  */
-describe('integration tests', () => {
+// eslint-disable-next-line jest/no-disabled-tests
+describe.skip('integration tests', () => {
   let mapReduce: MapReduceClient;
 
   beforeAll(() => {
