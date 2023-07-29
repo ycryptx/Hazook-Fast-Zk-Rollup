@@ -3,7 +3,7 @@ import { createInterface } from 'readline';
 import { Rollup, RollupState } from '../rollup';
 
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUM_REDUCERS = 2;
+const NUM_REDUCERS = 4;
 
 let currentReducer = 0;
 

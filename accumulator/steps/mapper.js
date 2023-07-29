@@ -28,7 +28,7 @@ const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(438);
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUM_REDUCERS = 2;
+const NUM_REDUCERS = 4;
 let currentReducer = 0;
 const deriveKey = () => {
     const key = `${currentReducer}\t${INPUT_SPLIT}`;
