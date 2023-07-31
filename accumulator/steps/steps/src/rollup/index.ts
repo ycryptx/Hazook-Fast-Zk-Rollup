@@ -4,43 +4,72 @@ import {
   SelfProof,
   Struct,
   Empty,
-  Poseidon,
+  MerkleMapWitness,
 } from 'snarkyjs';
 
 export class RollupState extends Struct({
-  hashedSum: Field,
-  sum: Field,
+  initialRoot: Field,
+  latestRoot: Field,
 }) {
-  static createOneStep(number: Field): RollupState {
+  static createOneStep(
+    initialRoot: Field,
+    latestRoot: Field,
+    key: Field,
+    currentValue: Field,
+    newValue: Field,
+    merkleMapWitness: MerkleMapWitness,
+  ): RollupState {
+    const [witnessRootBefore, witnessKey] =
+      merkleMapWitness.computeRootAndKey(currentValue);
+    initialRoot.assertEquals(witnessRootBefore);
+    witnessKey.assertEquals(key);
+    const [witnessRootAfter, _] = merkleMapWitness.computeRootAndKey(newValue);
+    latestRoot.assertEquals(witnessRootAfter);
+
     return new RollupState({
-      hashedSum: Poseidon.hash([number]),
-      sum: number,
+      initialRoot,
+      latestRoot,
     });
   }
+
   static createMerged(state1: RollupState, state2: RollupState): RollupState {
-    const sum = state1.sum.add(state2.sum);
     return new RollupState({
-      hashedSum: Poseidon.hash([sum]),
-      sum,
+      initialRoot: state1.initialRoot,
+      latestRoot: state2.latestRoot,
     });
   }
+
   static assertEquals(state1: RollupState, state2: RollupState): void {
-    state1.hashedSum.assertEquals(state2.hashedSum);
-    state1.sum.assertEquals(state2.sum);
+    state1.initialRoot.assertEquals(state2.initialRoot);
+    state1.latestRoot.assertEquals(state2.latestRoot);
   }
 }
 
 export const Rollup = Experimental.ZkProgram({
   publicInput: RollupState,
-  publicOutput: Empty,
 
   methods: {
     oneStep: {
-      privateInputs: [],
+      privateInputs: [Field, Field, Field, Field, Field, MerkleMapWitness],
 
-      method(state: RollupState) {
-        const computedState = RollupState.createOneStep(state.sum);
-        RollupState.assertEquals(state, computedState);
+      method(
+        newState: RollupState,
+        initialRoot: Field,
+        latestRoot: Field,
+        key: Field,
+        currentValue: Field,
+        newValue: Field,
+        merkleMapWitness: MerkleMapWitness,
+      ) {
+        const computedState = RollupState.createOneStep(
+          initialRoot,
+          latestRoot,
+          key,
+          currentValue,
+          newValue,
+          merkleMapWitness,
+        );
+        RollupState.assertEquals(newState, computedState);
         return undefined;
       },
     },
@@ -50,20 +79,19 @@ export const Rollup = Experimental.ZkProgram({
 
       method(
         newState: RollupState,
-        state1Proof: SelfProof<RollupState, Empty>,
-        state2Proof: SelfProof<RollupState, Empty>,
+        rollup1proof: SelfProof<RollupState, Empty>,
+        rollup2proof: SelfProof<RollupState, Empty>,
       ) {
-        state1Proof.verify();
-        state2Proof.verify();
+        rollup1proof.verify(); // A -> B
+        rollup2proof.verify(); // B -> C
 
-        const expectedSum = state1Proof.publicInput.sum.add(
-          state2Proof.publicInput.sum,
+        rollup1proof.publicInput.initialRoot.assertEquals(newState.initialRoot);
+
+        rollup1proof.publicInput.latestRoot.assertEquals(
+          rollup2proof.publicInput.initialRoot,
         );
 
-        newState.sum.equals(expectedSum);
-        newState.hashedSum.equals(Poseidon.hash([expectedSum]));
-
-        return undefined;
+        rollup2proof.publicInput.latestRoot.assertEquals(newState.latestRoot);
       },
     },
   },

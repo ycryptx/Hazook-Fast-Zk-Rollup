@@ -1,12 +1,10 @@
 import { createInterface } from 'readline';
 import { Rollup, RollupProof, RollupState } from '../rollup';
 
-const onNewLine = async (
-  line: string,
+export const onNewProof = async (
+  proofString: string,
   accumulatedProof: RollupProof,
 ): Promise<RollupProof> => {
-  const [, , proofString] = line.split('\t');
-
   if (!proofString) {
     return accumulatedProof;
   }
@@ -18,15 +16,15 @@ const onNewLine = async (
   }
 
   const currentState = new RollupState({
-    hashedSum: accumulatedProof.publicInput.hashedSum,
-    sum: accumulatedProof.publicInput.sum,
+    initialRoot: accumulatedProof.publicInput.initialRoot,
+    latestRoot: accumulatedProof.publicInput.latestRoot,
   });
 
   const newState = RollupState.createMerged(
     currentState,
     new RollupState({
-      hashedSum: proof.publicInput.hashedSum,
-      sum: proof.publicInput.sum,
+      initialRoot: proof.publicInput.initialRoot,
+      latestRoot: proof.publicInput.latestRoot,
     }),
   );
 
@@ -53,7 +51,8 @@ export const reducer = async (): Promise<void> => {
   });
 
   for await (const line of rl) {
-    rollupProof = await onNewLine(line, rollupProof);
+    const [, , proofString] = line.split('\t');
+    rollupProof = await onNewProof(proofString, rollupProof);
   }
   return onClosed(rollupProof);
 };

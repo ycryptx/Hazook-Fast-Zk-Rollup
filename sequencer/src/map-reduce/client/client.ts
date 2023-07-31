@@ -114,7 +114,9 @@ export class MapReduceClient {
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
               // TODO: remove the below comment per the comment below
               '-D',
-              `mapreduce.input.lineinputformat.linespermap=${inputLength / 4}`,
+              `mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
+                inputLength,
+              )}`,
               //
               '-input',
               `s3://${inputFile}`,
@@ -145,10 +147,7 @@ export class MapReduceClient {
         StepId: data.StepIds[0],
       },
     );
-    const results = await this.uploader.getEMROutputObjects(outputDir);
-
-    // TODO: verify this is what we want
-    return results.join('\n');
+    return this.uploader.getAccumulatedEMROutput(outputDir);
   }
 
   async initCluster(): Promise<string> {
@@ -251,5 +250,9 @@ export class MapReduceClient {
       describeClusterParams,
     );
     console.log('EMR Cluster is ready');
+  }
+
+  public mapperParallelism(inputLength: number): number {
+    return Math.round(inputLength / 4);
   }
 }
