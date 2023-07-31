@@ -30,4 +30,4 @@ build/
 
 .env
 
-preprocessed/*
+preprocessed/run*

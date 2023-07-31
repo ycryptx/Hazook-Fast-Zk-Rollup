@@ -1,0 +1,1 @@
+stores temporary files (only for demo purposes)
