@@ -7,8 +7,8 @@ import {
   ListObjectsV2Command,
   GetObjectCommandOutput,
 } from '@aws-sdk/client-s3';
-import { onNewProof } from 'rollup/src/reducer/reducer';
-import { RollupProof } from 'rollup/src/rollup';
+import { onNewProof } from '@ycryptx/map-reduce-scripts';
+import { RollupProof } from '@ycryptx/rollup';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';

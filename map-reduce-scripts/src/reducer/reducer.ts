@@ -1,5 +1,5 @@
 import { createInterface } from 'readline';
-import { Rollup, RollupProof, RollupState } from '../rollup';
+import { Rollup, RollupProof, RollupState } from '@ycryptx/rollup';
 
 export const onNewProof = async (
   proofString: string,

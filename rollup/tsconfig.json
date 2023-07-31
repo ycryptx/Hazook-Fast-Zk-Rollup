@@ -23,6 +23,5 @@
   "include": [
     "src/**/*",
     "__tests__/**/*"
-  ],
-  "references": [{ "path": "../rollup" }, { "path": "../map-reduce-scripts" }]
+  ]
 }

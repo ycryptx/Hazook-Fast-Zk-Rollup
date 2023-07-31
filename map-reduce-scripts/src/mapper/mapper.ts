@@ -1,6 +1,6 @@
 import { Field, MerkleMapWitness } from 'snarkyjs';
 import { createInterface } from 'readline';
-import { Rollup, RollupState } from '../rollup';
+import { Rollup, RollupState } from '@ycryptx/rollup';
 
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
 const NUM_REDUCERS = 4;

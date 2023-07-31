@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Field, MerkleMap } from 'snarkyjs';
 import { createInterface } from 'readline';
-import { Serialized } from 'rollup/src/mapper/mapper';
+import { Serialized } from '@ycryptx/map-reduce-scripts';
 
 import {
   Case,

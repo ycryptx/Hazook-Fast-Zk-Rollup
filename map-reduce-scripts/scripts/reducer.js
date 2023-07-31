@@ -18,58 +18,60 @@ module.exports = require("readline");
 
 /***/ }),
 
-/***/ 701:
+/***/ 599:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.mapper = void 0;
-const snarkyjs_1 = __webpack_require__(476);
+exports.reducer = exports.onNewProof = void 0;
 const readline_1 = __webpack_require__(521);
-const rollup_1 = __webpack_require__(438);
-const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUM_REDUCERS = 4;
-const mapper = async () => {
+const rollup_1 = __webpack_require__(332);
+const onNewProof = async (proofString, accumulatedProof) => {
+    if (!proofString) {
+        return accumulatedProof;
+    }
+    const proof = rollup_1.RollupProof.fromJSON(JSON.parse(proofString));
+    if (!accumulatedProof) {
+        return proof;
+    }
+    const currentState = new rollup_1.RollupState({
+        initialRoot: accumulatedProof.publicInput.initialRoot,
+        latestRoot: accumulatedProof.publicInput.latestRoot,
+    });
+    const newState = rollup_1.RollupState.createMerged(currentState, new rollup_1.RollupState({
+        initialRoot: proof.publicInput.initialRoot,
+        latestRoot: proof.publicInput.latestRoot,
+    }));
+    accumulatedProof = await rollup_1.Rollup.merge(newState, accumulatedProof, proof);
+    return accumulatedProof;
+};
+exports.onNewProof = onNewProof;
+const onClosed = async (accumulatedProof) => {
+    let accumulatedProofString = '';
+    if (accumulatedProof) {
+        accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
+    }
+    process.stdout.write(accumulatedProofString);
+    return;
+};
+const reducer = async () => {
     await rollup_1.Rollup.compile();
-    let currentReducer = 0;
-    let inputSplitCounter = 0;
-    const deriveKey = () => {
-        const key = `${currentReducer}\t${INPUT_SPLIT + inputSplitCounter}`;
-        currentReducer = (currentReducer + 1) % NUM_REDUCERS;
-        inputSplitCounter += 1;
-        return key;
-    };
+    let rollupProof;
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
     for await (const line of rl) {
-        if (!line) {
-            continue;
-        }
-        const serialized = JSON.parse(line);
-        const deserialized = {
-            initialRoot: (0, snarkyjs_1.Field)(serialized.initialRoot),
-            latestRoot: (0, snarkyjs_1.Field)(serialized.latestRoot),
-            key: (0, snarkyjs_1.Field)(serialized.key),
-            currentValue: (0, snarkyjs_1.Field)(serialized.currentValue),
-            newValue: (0, snarkyjs_1.Field)(serialized.newValue),
-            merkleMapWitness: snarkyjs_1.MerkleMapWitness.fromJSON(serialized.merkleMapWitness),
-        };
-        const state = new rollup_1.RollupState({
-            initialRoot: deserialized.initialRoot,
-            latestRoot: deserialized.latestRoot,
-        });
-        const proof = await rollup_1.Rollup.oneStep(state, deserialized.initialRoot, deserialized.latestRoot, deserialized.key, deserialized.currentValue, deserialized.newValue, deserialized.merkleMapWitness);
-        const proofString = JSON.stringify(proof.toJSON());
-        process.stdout.write(`${deriveKey()}\t${proofString}\n`);
+        const [, , proofString] = line.split('\t');
+        rollupProof = await (0, exports.onNewProof)(proofString, rollupProof);
     }
+    return onClosed(rollupProof);
 };
-exports.mapper = mapper;
-//# sourceMappingURL=mapper.js.map
+exports.reducer = reducer;
+//# sourceMappingURL=reducer.js.map
 
 /***/ }),
 
-/***/ 438:
+/***/ 332:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -167,8 +169,8 @@ var exports = __webpack_exports__;
 var __webpack_unused_export__;
 
 __webpack_unused_export__ = ({ value: true });
-const mapper_1 = __webpack_require__(701);
-(0, mapper_1.mapper)();
+const reducer_1 = __webpack_require__(599);
+(0, reducer_1.reducer)();
 //# sourceMappingURL=index.js.map
 })();
 

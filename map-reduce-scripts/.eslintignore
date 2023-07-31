@@ -1,7 +1,7 @@
 /**/*.js
+/**/*.cjs
 build
 bundle
 coverage
 node_modules
-data
-preprocessed
+scripts
