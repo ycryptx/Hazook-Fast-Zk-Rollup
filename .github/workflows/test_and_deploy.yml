@@ -51,6 +51,7 @@ jobs:
       - name: add test config
         working-directory: ./sequencer
         run: cp .env.example .env
+      - run: yarn install
       - name: run integration tests
         run: yarn sequencer test
       - name: run map-reduce tests
