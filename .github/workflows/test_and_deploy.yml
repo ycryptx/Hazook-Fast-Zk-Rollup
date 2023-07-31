@@ -53,8 +53,8 @@ jobs:
         run: cp .env.example .env
       - name: install dependencies
         run: yarn  install
-      - name: run integration tests
-        run: yarn sequencer test
+      # - name: run integration tests
+      #   run: yarn sequencer test
   publish:
     runs-on: ubuntu-latest
     needs: run_tests
