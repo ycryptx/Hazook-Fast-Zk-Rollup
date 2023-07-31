@@ -1,9 +1,9 @@
-dist
-build
-bundle
-coverage
+**/dist
+**/build
+**/bundle
+**/coverage
 **/node_modules/
-README.md
-__tests__
+**/README.md
+**/__tests__
 .github
 .vscode
