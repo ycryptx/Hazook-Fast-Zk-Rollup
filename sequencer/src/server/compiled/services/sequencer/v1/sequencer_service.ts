@@ -104,14 +104,15 @@ export const DemoRequest = {
 
   toJSON(message: DemoRequest): unknown {
     const obj: any = {};
-    message.case !== undefined && (obj.case = caseToJSON(message.case));
+    if (message.case !== 0) {
+      obj.case = caseToJSON(message.case);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<DemoRequest>): DemoRequest {
     return DemoRequest.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<DemoRequest>): DemoRequest {
     const message = createBaseDemoRequest();
     message.case = object.case ?? 0;
@@ -160,14 +161,15 @@ export const DemoResponse = {
 
   toJSON(message: DemoResponse): unknown {
     const obj: any = {};
-    message.result !== undefined && (obj.result = message.result);
+    if (message.result !== "") {
+      obj.result = message.result;
+    }
     return obj;
   },
 
   create(base?: DeepPartial<DemoResponse>): DemoResponse {
     return DemoResponse.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<DemoResponse>): DemoResponse {
     const message = createBaseDemoResponse();
     message.result = object.result ?? "";

@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        "declaration": true,
+        "declarationMap": true,
+        "lib": [
+            "ESNext",
+            "DOM"
+        ],
+    }
+}

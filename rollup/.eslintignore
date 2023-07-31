@@ -3,5 +3,3 @@ build
 bundle
 coverage
 node_modules
-data
-preprocessed

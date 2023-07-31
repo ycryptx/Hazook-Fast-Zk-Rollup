@@ -23,11 +23,10 @@ module.exports = require("readline");
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.reducer = void 0;
+exports.reducer = exports.onNewProof = void 0;
 const readline_1 = __webpack_require__(521);
-const rollup_1 = __webpack_require__(438);
-const onNewLine = async (line, accumulatedProof) => {
-    const [, , proofString] = line.split('\t');
+const rollup_1 = __webpack_require__(332);
+const onNewProof = async (proofString, accumulatedProof) => {
     if (!proofString) {
         return accumulatedProof;
     }
@@ -36,16 +35,17 @@ const onNewLine = async (line, accumulatedProof) => {
         return proof;
     }
     const currentState = new rollup_1.RollupState({
-        hashedSum: accumulatedProof.publicInput.hashedSum,
-        sum: accumulatedProof.publicInput.sum,
+        initialRoot: accumulatedProof.publicInput.initialRoot,
+        latestRoot: accumulatedProof.publicInput.latestRoot,
     });
     const newState = rollup_1.RollupState.createMerged(currentState, new rollup_1.RollupState({
-        hashedSum: proof.publicInput.hashedSum,
-        sum: proof.publicInput.sum,
+        initialRoot: proof.publicInput.initialRoot,
+        latestRoot: proof.publicInput.latestRoot,
     }));
     accumulatedProof = await rollup_1.Rollup.merge(newState, accumulatedProof, proof);
     return accumulatedProof;
 };
+exports.onNewProof = onNewProof;
 const onClosed = async (accumulatedProof) => {
     let accumulatedProofString = '';
     if (accumulatedProof) {
@@ -61,7 +61,8 @@ const reducer = async () => {
         input: process.stdin,
     });
     for await (const line of rl) {
-        rollupProof = await onNewLine(line, rollupProof);
+        const [, , proofString] = line.split('\t');
+        rollupProof = await (0, exports.onNewProof)(proofString, rollupProof);
     }
     return onClosed(rollupProof);
 };
@@ -70,7 +71,7 @@ exports.reducer = reducer;
 
 /***/ }),
 
-/***/ 438:
+/***/ 332:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -78,49 +79,51 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RollupProof = exports.Rollup = exports.RollupState = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 class RollupState extends (0, snarkyjs_1.Struct)({
-    hashedSum: snarkyjs_1.Field,
-    sum: snarkyjs_1.Field,
+    initialRoot: snarkyjs_1.Field,
+    latestRoot: snarkyjs_1.Field,
 }) {
-    static createOneStep(number) {
+    static createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
+        const [witnessRootBefore, witnessKey] = merkleMapWitness.computeRootAndKey(currentValue);
+        initialRoot.assertEquals(witnessRootBefore);
+        witnessKey.assertEquals(key);
+        const [witnessRootAfter, _] = merkleMapWitness.computeRootAndKey(newValue);
+        latestRoot.assertEquals(witnessRootAfter);
         return new RollupState({
-            hashedSum: snarkyjs_1.Poseidon.hash([number]),
-            sum: number,
+            initialRoot,
+            latestRoot,
         });
     }
     static createMerged(state1, state2) {
-        const sum = state1.sum.add(state2.sum);
         return new RollupState({
-            hashedSum: snarkyjs_1.Poseidon.hash([sum]),
-            sum,
+            initialRoot: state1.initialRoot,
+            latestRoot: state2.latestRoot,
         });
     }
     static assertEquals(state1, state2) {
-        state1.hashedSum.assertEquals(state2.hashedSum);
-        state1.sum.assertEquals(state2.sum);
+        state1.initialRoot.assertEquals(state2.initialRoot);
+        state1.latestRoot.assertEquals(state2.latestRoot);
     }
 }
 exports.RollupState = RollupState;
 exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
     publicInput: RollupState,
-    publicOutput: snarkyjs_1.Empty,
     methods: {
         oneStep: {
-            privateInputs: [],
-            method(state) {
-                const computedState = RollupState.createOneStep(state.sum);
-                RollupState.assertEquals(state, computedState);
+            privateInputs: [snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.MerkleMapWitness],
+            method(newState, initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
+                const computedState = RollupState.createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness);
+                RollupState.assertEquals(newState, computedState);
                 return undefined;
             },
         },
         merge: {
             privateInputs: [snarkyjs_1.SelfProof, snarkyjs_1.SelfProof],
-            method(newState, state1Proof, state2Proof) {
-                state1Proof.verify();
-                state2Proof.verify();
-                const expectedSum = state1Proof.publicInput.sum.add(state2Proof.publicInput.sum);
-                newState.sum.equals(expectedSum);
-                newState.hashedSum.equals(snarkyjs_1.Poseidon.hash([expectedSum]));
-                return undefined;
+            method(newState, rollup1proof, rollup2proof) {
+                rollup1proof.verify(); // A -> B
+                rollup2proof.verify(); // B -> C
+                rollup1proof.publicInput.initialRoot.assertEquals(newState.initialRoot);
+                rollup1proof.publicInput.latestRoot.assertEquals(rollup2proof.publicInput.initialRoot);
+                rollup2proof.publicInput.latestRoot.assertEquals(newState.latestRoot);
             },
         },
     },

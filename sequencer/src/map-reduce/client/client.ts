@@ -114,7 +114,9 @@ export class MapReduceClient {
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
               // TODO: remove the below comment per the comment below
               '-D',
-              `mapreduce.input.lineinputformat.linespermap=${inputLength / 4}`,
+              `mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
+                inputLength,
+              )}`,
               //
               '-input',
               `s3://${inputFile}`,
@@ -136,6 +138,8 @@ export class MapReduceClient {
       ],
     });
 
+    const start = Date.now();
+
     const data = await this.emrClient.send(command);
     console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
     await waitUntilStepComplete(
@@ -145,10 +149,14 @@ export class MapReduceClient {
         StepId: data.StepIds[0],
       },
     );
-    const results = await this.uploader.getEMROutputObjects(outputDir);
+    const result = await this.uploader.getAccumulatedEMROutput(outputDir);
 
-    // TODO: verify this is what we want
-    return results.join('\n');
+    const end = Date.now();
+    console.log(`Demo finished`);
+    console.log(`Result: ${result}`);
+    console.log(`Running time: ${end - start} ms`);
+
+    return result;
   }
 
   async initCluster(): Promise<string> {
@@ -251,5 +259,9 @@ export class MapReduceClient {
       describeClusterParams,
     );
     console.log('EMR Cluster is ready');
+  }
+
+  public mapperParallelism(inputLength: number): number {
+    return Math.round(inputLength / 4);
   }
 }

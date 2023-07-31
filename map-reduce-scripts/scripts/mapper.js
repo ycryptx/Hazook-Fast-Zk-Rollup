@@ -26,17 +26,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mapper = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
-const rollup_1 = __webpack_require__(438);
+const rollup_1 = __webpack_require__(332);
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
 const NUM_REDUCERS = 4;
-let currentReducer = 0;
-const deriveKey = () => {
-    const key = `${currentReducer}\t${INPUT_SPLIT}`;
-    currentReducer = (currentReducer + 1) % NUM_REDUCERS;
-    return key;
-};
 const mapper = async () => {
     await rollup_1.Rollup.compile();
+    let currentReducer = 0;
+    let inputSplitCounter = 0;
+    const deriveKey = () => {
+        const key = `${currentReducer}\t${INPUT_SPLIT + inputSplitCounter}`;
+        currentReducer = (currentReducer + 1) % NUM_REDUCERS;
+        inputSplitCounter += 1;
+        return key;
+    };
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
@@ -44,12 +46,22 @@ const mapper = async () => {
         if (!line) {
             continue;
         }
-        const number = parseInt(line);
-        const state = rollup_1.RollupState.createOneStep((0, snarkyjs_1.Field)(number));
-        const proof = await rollup_1.Rollup.oneStep(state);
+        const serialized = JSON.parse(line);
+        const deserialized = {
+            initialRoot: (0, snarkyjs_1.Field)(serialized.initialRoot),
+            latestRoot: (0, snarkyjs_1.Field)(serialized.latestRoot),
+            key: (0, snarkyjs_1.Field)(serialized.key),
+            currentValue: (0, snarkyjs_1.Field)(serialized.currentValue),
+            newValue: (0, snarkyjs_1.Field)(serialized.newValue),
+            merkleMapWitness: snarkyjs_1.MerkleMapWitness.fromJSON(serialized.merkleMapWitness),
+        };
+        const state = new rollup_1.RollupState({
+            initialRoot: deserialized.initialRoot,
+            latestRoot: deserialized.latestRoot,
+        });
+        const proof = await rollup_1.Rollup.oneStep(state, deserialized.initialRoot, deserialized.latestRoot, deserialized.key, deserialized.currentValue, deserialized.newValue, deserialized.merkleMapWitness);
         const proofString = JSON.stringify(proof.toJSON());
-        const mapOutput = `${deriveKey()}\t${proofString}\n`;
-        process.stdout.write(mapOutput);
+        process.stdout.write(`${deriveKey()}\t${proofString}\n`);
     }
 };
 exports.mapper = mapper;
@@ -57,7 +69,7 @@ exports.mapper = mapper;
 
 /***/ }),
 
-/***/ 438:
+/***/ 332:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -65,49 +77,51 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RollupProof = exports.Rollup = exports.RollupState = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 class RollupState extends (0, snarkyjs_1.Struct)({
-    hashedSum: snarkyjs_1.Field,
-    sum: snarkyjs_1.Field,
+    initialRoot: snarkyjs_1.Field,
+    latestRoot: snarkyjs_1.Field,
 }) {
-    static createOneStep(number) {
+    static createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
+        const [witnessRootBefore, witnessKey] = merkleMapWitness.computeRootAndKey(currentValue);
+        initialRoot.assertEquals(witnessRootBefore);
+        witnessKey.assertEquals(key);
+        const [witnessRootAfter, _] = merkleMapWitness.computeRootAndKey(newValue);
+        latestRoot.assertEquals(witnessRootAfter);
         return new RollupState({
-            hashedSum: snarkyjs_1.Poseidon.hash([number]),
-            sum: number,
+            initialRoot,
+            latestRoot,
         });
     }
     static createMerged(state1, state2) {
-        const sum = state1.sum.add(state2.sum);
         return new RollupState({
-            hashedSum: snarkyjs_1.Poseidon.hash([sum]),
-            sum,
+            initialRoot: state1.initialRoot,
+            latestRoot: state2.latestRoot,
         });
     }
     static assertEquals(state1, state2) {
-        state1.hashedSum.assertEquals(state2.hashedSum);
-        state1.sum.assertEquals(state2.sum);
+        state1.initialRoot.assertEquals(state2.initialRoot);
+        state1.latestRoot.assertEquals(state2.latestRoot);
     }
 }
 exports.RollupState = RollupState;
 exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
     publicInput: RollupState,
-    publicOutput: snarkyjs_1.Empty,
     methods: {
         oneStep: {
-            privateInputs: [],
-            method(state) {
-                const computedState = RollupState.createOneStep(state.sum);
-                RollupState.assertEquals(state, computedState);
+            privateInputs: [snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.MerkleMapWitness],
+            method(newState, initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
+                const computedState = RollupState.createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness);
+                RollupState.assertEquals(newState, computedState);
                 return undefined;
             },
         },
         merge: {
             privateInputs: [snarkyjs_1.SelfProof, snarkyjs_1.SelfProof],
-            method(newState, state1Proof, state2Proof) {
-                state1Proof.verify();
-                state2Proof.verify();
-                const expectedSum = state1Proof.publicInput.sum.add(state2Proof.publicInput.sum);
-                newState.sum.equals(expectedSum);
-                newState.hashedSum.equals(snarkyjs_1.Poseidon.hash([expectedSum]));
-                return undefined;
+            method(newState, rollup1proof, rollup2proof) {
+                rollup1proof.verify(); // A -> B
+                rollup2proof.verify(); // B -> C
+                rollup1proof.publicInput.initialRoot.assertEquals(newState.initialRoot);
+                rollup1proof.publicInput.latestRoot.assertEquals(rollup2proof.publicInput.initialRoot);
+                rollup2proof.publicInput.latestRoot.assertEquals(newState.latestRoot);
             },
         },
     },

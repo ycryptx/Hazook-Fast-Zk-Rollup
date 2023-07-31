@@ -147,15 +147,15 @@ resource "aws_s3_object" "emr_bootstrap_script" {
 resource "aws_s3_object" "emr_reducer" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "reducer.js"
-  source = "../steps/reducer.js"
-  etag = filemd5("../steps/reducer.js")
+  source = "../../map-reduce-scripts/scripts/reducer.js"
+  etag = filemd5("../../map-reduce-scripts/scripts/reducer.js")
 }
 
 resource "aws_s3_object" "emr_mapper" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "mapper.js"
-  source = "../steps/mapper.js"
-  etag = filemd5("../steps/mapper.js")
+  source = "../../map-reduce-scripts/scripts/mapper.js"
+  etag = filemd5("../../map-reduce-scripts/scripts/mapper.js")
 }
 
 # Public Subnet Setup

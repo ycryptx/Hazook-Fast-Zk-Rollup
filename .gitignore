@@ -1,3 +1,4 @@
 .vscode
 bundle
 .aws
+node_modules
