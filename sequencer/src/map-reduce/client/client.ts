@@ -138,6 +138,8 @@ export class MapReduceClient {
       ],
     });
 
+    const start = Date.now();
+
     const data = await this.emrClient.send(command);
     console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
     await waitUntilStepComplete(
@@ -147,7 +149,14 @@ export class MapReduceClient {
         StepId: data.StepIds[0],
       },
     );
-    return this.uploader.getAccumulatedEMROutput(outputDir);
+    const result = await this.uploader.getAccumulatedEMROutput(outputDir);
+
+    const end = Date.now();
+    console.log(`Demo finished`);
+    console.log(`Result: ${result}`);
+    console.log(`Running time: ${end - start} ms`);
+
+    return result;
   }
 
   async initCluster(): Promise<string> {

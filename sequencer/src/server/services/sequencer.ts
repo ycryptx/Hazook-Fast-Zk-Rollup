@@ -74,9 +74,6 @@ class Sequencer implements SequencerServiceImplementation {
   demo = async (request: DemoRequest): Promise<DeepPartial<DemoResponse>> => {
     const response: DemoResponse = { result: '' };
     let inputFile = '';
-
-    const start = Date.now();
-
     let inputLength = 0;
 
     switch (request.case) {
@@ -108,12 +105,6 @@ class Sequencer implements SequencerServiceImplementation {
 
     // start Hadoop map-reduce operation
     response.result = await mapReduce.process(inputLocation, inputLength);
-
-    const end = Date.now();
-
-    console.log(`Demo ${request.case} finished`);
-    console.log(`Result: ${response.result}`);
-    console.log(`Running time: ${end - start} ms`);
 
     return response;
   };
