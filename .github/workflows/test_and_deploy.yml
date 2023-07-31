@@ -90,6 +90,5 @@ jobs:
       - name: Push to ECR registry
         uses: docker/build-push-action@v2
         with:
-          context: sequencer
           tags: public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest
           push: true

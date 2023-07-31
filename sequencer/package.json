@@ -50,7 +50,6 @@
     "@aws-sdk/client-emr": "^3.28.0",
     "@aws-sdk/client-s3": "^3.28.0",
     "@aws-sdk/lib-storage": "^3.28.0",
-    "@aws-sdk/signature-v4-crt": "^3.378.0",
     "@ycryptx/map-reduce-scripts": "1.0.0",
     "@ycryptx/rollup": "1.0.0",
     "cross-env": "^7.0.3",
