@@ -41,11 +41,12 @@ export const mapper = async (): Promise<void> => {
   });
 
   for await (const line of rl) {
-    if (!line) {
+    const [, value] = line.split('\t'); // mapper input is in k:v form of offset \t line due to NLineInputFormat
+    if (!value) {
       continue;
     }
 
-    const serialized: Serialized = JSON.parse(line);
+    const serialized: Serialized = JSON.parse(value);
 
     const deserialized: Deserialized = {
       initialRoot: Field(serialized.initialRoot),

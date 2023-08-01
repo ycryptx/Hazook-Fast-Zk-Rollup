@@ -61,7 +61,8 @@ const reducer = async () => {
         input: process.stdin,
     });
     for await (const line of rl) {
-        const [, , proofString] = line.split('\t');
+        const [pratitionKey, sortingKey, proofString] = line.split('\t');
+        console.error(`Reducer: partitionKey=${pratitionKey}, sortingKey=${sortingKey}`);
         rollupProof = await (0, exports.onNewProof)(proofString, rollupProof);
     }
     return onClosed(rollupProof);

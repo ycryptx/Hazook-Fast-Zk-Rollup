@@ -43,10 +43,11 @@ const mapper = async () => {
         input: process.stdin,
     });
     for await (const line of rl) {
-        if (!line) {
+        const [, value] = line.split('\t'); // mapper input is in k:v form of offset \t line due to NLineInputFormat
+        if (!value) {
             continue;
         }
-        const serialized = JSON.parse(line);
+        const serialized = JSON.parse(value);
         const deserialized = {
             initialRoot: (0, snarkyjs_1.Field)(serialized.initialRoot),
             latestRoot: (0, snarkyjs_1.Field)(serialized.latestRoot),
@@ -61,7 +62,9 @@ const mapper = async () => {
         });
         const proof = await rollup_1.Rollup.oneStep(state, deserialized.initialRoot, deserialized.latestRoot, deserialized.key, deserialized.currentValue, deserialized.newValue, deserialized.merkleMapWitness);
         const proofString = JSON.stringify(proof.toJSON());
-        process.stdout.write(`${deriveKey()}\t${proofString}\n`);
+        const mapKey = deriveKey();
+        process.stdout.write(`${mapKey}\t${proofString}\n`);
+        console.error(`Mapper: input split=${INPUT_SPLIT}, key=${mapKey}`);
     }
 };
 exports.mapper = mapper;

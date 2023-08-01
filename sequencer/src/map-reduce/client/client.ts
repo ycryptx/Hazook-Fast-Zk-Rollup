@@ -175,25 +175,24 @@ export class MapReduceClient {
       ServiceRole: 'EMR_DefaultRole',
       JobFlowRole: 'emr-ec2-profile',
       Configurations: [
-        {
-          Classification: 'yarn-site',
-          Properties: {
-            'yarn.nodemanager.resource.cpu-vcores': '4', // Set the number of CPU cores allocated to each core node
-            'yarn.nodemanager.resource.memory-mb': '24576', // Set the amount of memory (in MB) allocated to each core node (24 GB)
-          },
-        },
+        // {
+        //   Classification: 'yarn-site',
+        //   Properties: {
+        //     'yarn.nodemanager.resource.cpu-vcores': '16', // Set the number of CPU cores allocated to each core node
+        //     'yarn.nodemanager.resource.memory-mb': '24576', // Set the amount of memory (in MB) allocated to each core node (24 GB)
+        //   },
+        // },
         {
           Classification: 'mapred-site',
           Properties: {
-            'mapreduce.map.cpu.vcores': '2', // Set the number of CPU cores allocated to each mapper task
-            'mapreduce.reduce.cpu.vcores': '2', // Set the number of CPU cores allocated to each reducer task
+            'mapreduce.map.cpu.vcores': '1',
+            'mapreduce.reduce.cpu.vcores': '1',
             'mapreduce.map.memory.mb': '6144',
             'mapreduce.reduce.memory.mb': '6144',
             'mapreduce.task.timeout': '0',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
-            'mapred.reduce.tasks': '2',
             'mapred.output.key.comparator.class':
               'org.apache.hadoop.mapred.lib.KeyFieldBasedComparator',
             'mapreduce.partition.keycomparator.options': '-k1,1n',
