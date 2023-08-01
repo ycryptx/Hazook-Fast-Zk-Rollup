@@ -13,7 +13,7 @@ describe.skip('test rollup', () => {
     console.log('verificationKey', verificationKey);
   }, 1000 * 60 * 10);
 
-  it.skip('case 1', async () => {
+  it('case 1', async () => {
     // const state1 = RollupState.createOneStep(Field(1));
     // const proof1 = await Rollup.oneStep(state1);
 

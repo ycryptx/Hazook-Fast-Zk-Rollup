@@ -28,6 +28,12 @@ const preProcessInputFile = async (inputFile: string): Promise<string> => {
 
   let currentValue = Field(0);
 
+  try {
+    fs.unlinkSync(path.join(__dirname, '../', preprocessedFile));
+  } catch (err) {
+    // ignore
+  }
+
   for await (const line of rl) {
     if (!line) {
       continue;

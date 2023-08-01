@@ -71,6 +71,8 @@ export const mapper = async (): Promise<void> => {
       deserialized.merkleMapWitness,
     );
     const proofString = JSON.stringify(proof.toJSON());
-    process.stdout.write(`${deriveKey()}\t${proofString}\n`);
+    const mapKey = deriveKey();
+    process.stdout.write(`${mapKey}\t${proofString}\n`);
+    console.error(`Mapper: input split=${INPUT_SPLIT}, key=${mapKey}`);
   }
 };

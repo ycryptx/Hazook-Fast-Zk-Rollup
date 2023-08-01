@@ -51,7 +51,10 @@ export const reducer = async (): Promise<void> => {
   });
 
   for await (const line of rl) {
-    const [, , proofString] = line.split('\t');
+    const [pratitionKey, sortingKey, proofString] = line.split('\t');
+    console.error(
+      `Reducer: partitionKey=${pratitionKey}, sortingKey=${sortingKey}`,
+    );
     rollupProof = await onNewProof(proofString, rollupProof);
   }
   return onClosed(rollupProof);
