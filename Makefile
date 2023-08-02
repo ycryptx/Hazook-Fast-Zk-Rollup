@@ -2,7 +2,7 @@ LOCAL_HADOOP_IMAGE_NAME ?= hadoop
 
 .PHONY: # ignore
 
-echo: 
+echo:
 	echo $(LOCAL_HADOOP_IMAGE_NAME)
 
 help:
@@ -14,7 +14,7 @@ build-local-accumulator: # build a Hadoop Single Node Cluster as a Docker image
 	docker build -t $(LOCAL_HADOOP_IMAGE_NAME) .
 
 up-local-accumulator: # stand up a Hadoop Single Node Cluster conatainer
-	docker run --rm --name mina-accumulator -p 9864:9864 -p 9870:9870 -p 8088:8088 -p 9000:9000 --hostname localhost $(LOCAL_HADOOP_IMAGE_NAME) --memory="8g" &
+	docker run --rm --name mina-accumulator -p 9864:9864 -p 9870:9870 -p 8088:8088 -p 9000:9000 --hostname localhost $(LOCAL_HADOOP_IMAGE_NAME) --memory="12g" &
 
 build-map-reduce-steps: # builds mapper and reducer nodejs sripts to be uploaded to Hadoop
 	yarn map-reduce-scripts build; \

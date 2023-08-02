@@ -5,6 +5,7 @@ import {
   Struct,
   Empty,
   MerkleMapWitness,
+  MerkleMap,
 } from 'snarkyjs';
 
 export class RollupState extends Struct({
@@ -98,3 +99,119 @@ export const Rollup = Experimental.ZkProgram({
 });
 
 export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {}
+
+export type Transaction = number;
+
+export class SerializedTransaction {
+  initialRoot: Field;
+  latestRoot: Field;
+  key: Field;
+  currentValue: Field;
+  newValue: Field;
+  merkleMapWitness: MerkleMapWitness;
+
+  constructor(params: {
+    initialRoot: Field;
+    latestRoot: Field;
+    key: Field;
+    currentValue: Field;
+    newValue: Field;
+    merkleMapWitness: MerkleMapWitness;
+  }) {
+    const {
+      initialRoot,
+      latestRoot,
+      key,
+      currentValue,
+      newValue,
+      merkleMapWitness,
+    } = params;
+    this.initialRoot = initialRoot;
+    this.latestRoot = latestRoot;
+    this.key = key;
+    this.currentValue = currentValue;
+    this.newValue = newValue;
+    this.merkleMapWitness = merkleMapWitness;
+  }
+
+  toJSON(): JSONSerializedTransaction {
+    return {
+      initialRoot: this.initialRoot.toJSON(),
+      latestRoot: this.latestRoot.toJSON(),
+      key: this.key.toJSON(),
+      currentValue: this.currentValue.toJSON(),
+      newValue: this.newValue.toJSON(),
+      merkleMapWitness: this.merkleMapWitness.toJSON(),
+    };
+  }
+}
+
+export type JSONSerializedTransaction = {
+  initialRoot: string;
+  latestRoot: string;
+  key: string;
+  currentValue: string;
+  newValue: string;
+  merkleMapWitness: string;
+};
+
+export class TransactionPreProcessor {
+  merkleMap: MerkleMap;
+  currentValue: Field;
+  constructor() {
+    this.merkleMap = new MerkleMap();
+    this.currentValue = Field(0);
+  }
+
+  public processTx(tx: Transaction): SerializedTransaction {
+    const initialRoot = this.merkleMap.getRoot();
+    const newValue = Field(tx);
+    const key = Field(this.merkleMap.tree.leafCount);
+    const currentValue = Field(this.currentValue.value);
+
+    this.merkleMap.set(key, newValue);
+    this.currentValue = newValue;
+
+    return new SerializedTransaction({
+      initialRoot: initialRoot,
+      latestRoot: this.merkleMap.getRoot(),
+      key,
+      currentValue,
+      newValue,
+      merkleMapWitness: this.merkleMap.getWitness(key),
+    });
+  }
+}
+
+export class Accumulator {
+  private _accumulatedProof: RollupProof;
+
+  public async addProof(proof: RollupProof): Promise<void> {
+    if (!this._accumulatedProof) {
+      this._accumulatedProof = proof;
+    }
+
+    const currentState = new RollupState({
+      initialRoot: this._accumulatedProof.publicInput.initialRoot,
+      latestRoot: this._accumulatedProof.publicInput.latestRoot,
+    });
+
+    const newState = RollupState.createMerged(
+      currentState,
+      new RollupState({
+        initialRoot: proof.publicInput.initialRoot,
+        latestRoot: proof.publicInput.latestRoot,
+      }),
+    );
+
+    this._accumulatedProof = await Rollup.merge(
+      newState,
+      this._accumulatedProof,
+      proof,
+    );
+  }
+
+  public get accumulatedProof(): RollupProof {
+    return this._accumulatedProof;
+  }
+}

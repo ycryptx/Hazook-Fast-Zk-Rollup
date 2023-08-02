@@ -14,6 +14,7 @@ import { Uploader } from '../uploader';
 import { runShellCommand } from '../utils';
 
 const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
+const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS);
 
 export class MapReduceClient {
   private mode: Mode;
@@ -41,11 +42,14 @@ export class MapReduceClient {
    */
   async process(inputFile: string, inputLength: number): Promise<string> {
     return this.mode == Mode.LOCAL
-      ? this.processLocal(inputFile)
+      ? this.processLocal(inputFile, inputLength)
       : this.processEmr(inputFile, inputLength);
   }
 
-  private async processLocal(inputFile: string): Promise<string> {
+  private async processLocal(
+    inputFile: string,
+    inputLength: number,
+  ): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -53,7 +57,6 @@ export class MapReduceClient {
     // initiate map-reduce
     runShellCommand(
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
-        -D mapred.reduce.tasks=2 \
         -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
         -D mapreduce.partition.keycomparator.options=-k1,1n \
         -D stream.num.map.output.key.fields=2 \
@@ -61,18 +64,17 @@ export class MapReduceClient {
         -D mapreduce.job.output.key.field.separator='\t' \
         -D mapreduce.map.output.key.field.separator='\t' \
         -D mapred.text.key.comparator.options=-k2,2n \
+        -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
+          inputLength,
+        )} \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
-        -output ${outputDir}`,
+        -output ${outputDir} \
+        -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
     );
 
-    // get result
-    const hadoopResult = runShellCommand(
-      `docker exec ${container} hdfs dfs -cat ${outputDir}/*`,
-    );
-
-    return (hadoopResult || '').toString().trim();
+    return this.uploader.getAccumulatedLocalHadoopOutput(container, outputDir);
   }
 
   private async processEmr(
@@ -261,6 +263,9 @@ export class MapReduceClient {
   }
 
   public mapperParallelism(inputLength: number): number {
-    return Math.round(inputLength / 4);
+    if (inputLength < NUMBER_OF_REDUCERS) {
+      return inputLength;
+    }
+    return NUMBER_OF_REDUCERS;
   }
 }
