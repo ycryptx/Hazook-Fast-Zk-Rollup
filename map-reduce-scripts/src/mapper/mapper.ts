@@ -1,27 +1,14 @@
 import { Field, MerkleMapWitness } from 'snarkyjs';
 import { createInterface } from 'readline';
-import { Rollup, RollupState } from '@ycryptx/rollup';
+import {
+  Rollup,
+  RollupState,
+  JSONSerializedTransaction,
+  SerializedTransaction,
+} from '@ycryptx/rollup';
 
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
 const NUM_REDUCERS = 4;
-
-export type Serialized = {
-  initialRoot: string;
-  latestRoot: string;
-  key: string;
-  currentValue: string;
-  newValue: string;
-  merkleMapWitness: string;
-};
-
-type Deserialized = {
-  initialRoot: Field;
-  latestRoot: Field;
-  key: Field;
-  currentValue: Field;
-  newValue: Field;
-  merkleMapWitness: MerkleMapWitness;
-};
 
 export const mapper = async (): Promise<void> => {
   await Rollup.compile();
@@ -46,30 +33,32 @@ export const mapper = async (): Promise<void> => {
       continue;
     }
 
-    const serialized: Serialized = JSON.parse(value);
+    const jsonSerialized: JSONSerializedTransaction = JSON.parse(value);
 
-    const deserialized: Deserialized = {
-      initialRoot: Field(serialized.initialRoot),
-      latestRoot: Field(serialized.latestRoot),
-      key: Field(serialized.key),
-      currentValue: Field(serialized.currentValue),
-      newValue: Field(serialized.newValue),
-      merkleMapWitness: MerkleMapWitness.fromJSON(serialized.merkleMapWitness),
-    };
+    const serialized = new SerializedTransaction({
+      initialRoot: Field(jsonSerialized.initialRoot),
+      latestRoot: Field(jsonSerialized.latestRoot),
+      key: Field(jsonSerialized.key),
+      currentValue: Field(jsonSerialized.currentValue),
+      newValue: Field(jsonSerialized.newValue),
+      merkleMapWitness: MerkleMapWitness.fromJSON(
+        jsonSerialized.merkleMapWitness,
+      ),
+    });
 
     const state = new RollupState({
-      initialRoot: deserialized.initialRoot,
-      latestRoot: deserialized.latestRoot,
+      initialRoot: serialized.initialRoot,
+      latestRoot: serialized.latestRoot,
     });
 
     const proof = await Rollup.oneStep(
       state,
-      deserialized.initialRoot,
-      deserialized.latestRoot,
-      deserialized.key,
-      deserialized.currentValue,
-      deserialized.newValue,
-      deserialized.merkleMapWitness,
+      serialized.initialRoot,
+      serialized.latestRoot,
+      serialized.key,
+      serialized.currentValue,
+      serialized.newValue,
+      serialized.merkleMapWitness,
     );
     const proofString = JSON.stringify(proof.toJSON());
     const mapKey = deriveKey();

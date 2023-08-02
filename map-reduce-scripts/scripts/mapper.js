@@ -47,20 +47,20 @@ const mapper = async () => {
         if (!value) {
             continue;
         }
-        const serialized = JSON.parse(value);
-        const deserialized = {
-            initialRoot: (0, snarkyjs_1.Field)(serialized.initialRoot),
-            latestRoot: (0, snarkyjs_1.Field)(serialized.latestRoot),
-            key: (0, snarkyjs_1.Field)(serialized.key),
-            currentValue: (0, snarkyjs_1.Field)(serialized.currentValue),
-            newValue: (0, snarkyjs_1.Field)(serialized.newValue),
-            merkleMapWitness: snarkyjs_1.MerkleMapWitness.fromJSON(serialized.merkleMapWitness),
-        };
-        const state = new rollup_1.RollupState({
-            initialRoot: deserialized.initialRoot,
-            latestRoot: deserialized.latestRoot,
+        const jsonSerialized = JSON.parse(value);
+        const serialized = new rollup_1.SerializedTransaction({
+            initialRoot: (0, snarkyjs_1.Field)(jsonSerialized.initialRoot),
+            latestRoot: (0, snarkyjs_1.Field)(jsonSerialized.latestRoot),
+            key: (0, snarkyjs_1.Field)(jsonSerialized.key),
+            currentValue: (0, snarkyjs_1.Field)(jsonSerialized.currentValue),
+            newValue: (0, snarkyjs_1.Field)(jsonSerialized.newValue),
+            merkleMapWitness: snarkyjs_1.MerkleMapWitness.fromJSON(jsonSerialized.merkleMapWitness),
         });
-        const proof = await rollup_1.Rollup.oneStep(state, deserialized.initialRoot, deserialized.latestRoot, deserialized.key, deserialized.currentValue, deserialized.newValue, deserialized.merkleMapWitness);
+        const state = new rollup_1.RollupState({
+            initialRoot: serialized.initialRoot,
+            latestRoot: serialized.latestRoot,
+        });
+        const proof = await rollup_1.Rollup.oneStep(state, serialized.initialRoot, serialized.latestRoot, serialized.key, serialized.currentValue, serialized.newValue, serialized.merkleMapWitness);
         const proofString = JSON.stringify(proof.toJSON());
         const mapKey = deriveKey();
         process.stdout.write(`${mapKey}\t${proofString}\n`);
@@ -77,7 +77,7 @@ exports.mapper = mapper;
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RollupProof = exports.Rollup = exports.RollupState = void 0;
+exports.Accumulator = exports.TransactionPreProcessor = exports.SerializedTransaction = exports.RollupProof = exports.Rollup = exports.RollupState = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 class RollupState extends (0, snarkyjs_1.Struct)({
     initialRoot: snarkyjs_1.Field,
@@ -132,6 +132,71 @@ exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
 class RollupProof extends snarkyjs_1.Experimental.ZkProgram.Proof(exports.Rollup) {
 }
 exports.RollupProof = RollupProof;
+class SerializedTransaction {
+    constructor(params) {
+        const { initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness, } = params;
+        this.initialRoot = initialRoot;
+        this.latestRoot = latestRoot;
+        this.key = key;
+        this.currentValue = currentValue;
+        this.newValue = newValue;
+        this.merkleMapWitness = merkleMapWitness;
+    }
+    toJSON() {
+        return {
+            initialRoot: this.initialRoot.toJSON(),
+            latestRoot: this.latestRoot.toJSON(),
+            key: this.key.toJSON(),
+            currentValue: this.currentValue.toJSON(),
+            newValue: this.newValue.toJSON(),
+            merkleMapWitness: this.merkleMapWitness.toJSON(),
+        };
+    }
+}
+exports.SerializedTransaction = SerializedTransaction;
+class TransactionPreProcessor {
+    constructor() {
+        this.merkleMap = new snarkyjs_1.MerkleMap();
+        this.currentValue = (0, snarkyjs_1.Field)(0);
+    }
+    processTx(tx) {
+        const initialRoot = this.merkleMap.getRoot();
+        const newValue = (0, snarkyjs_1.Field)(tx);
+        const key = (0, snarkyjs_1.Field)(this.merkleMap.tree.leafCount);
+        const currentValue = (0, snarkyjs_1.Field)(this.currentValue.value);
+        this.merkleMap.set(key, newValue);
+        this.currentValue = newValue;
+        return new SerializedTransaction({
+            initialRoot: initialRoot,
+            latestRoot: this.merkleMap.getRoot(),
+            key,
+            currentValue,
+            newValue,
+            merkleMapWitness: this.merkleMap.getWitness(key),
+        });
+    }
+}
+exports.TransactionPreProcessor = TransactionPreProcessor;
+class Accumulator {
+    async addProof(proof) {
+        if (!this._accumulatedProof) {
+            this._accumulatedProof = proof;
+        }
+        const currentState = new RollupState({
+            initialRoot: this._accumulatedProof.publicInput.initialRoot,
+            latestRoot: this._accumulatedProof.publicInput.latestRoot,
+        });
+        const newState = RollupState.createMerged(currentState, new RollupState({
+            initialRoot: proof.publicInput.initialRoot,
+            latestRoot: proof.publicInput.latestRoot,
+        }));
+        this._accumulatedProof = await exports.Rollup.merge(newState, this._accumulatedProof, proof);
+    }
+    get accumulatedProof() {
+        return this._accumulatedProof;
+    }
+}
+exports.Accumulator = Accumulator;
 //# sourceMappingURL=index.js.map
 
 /***/ })

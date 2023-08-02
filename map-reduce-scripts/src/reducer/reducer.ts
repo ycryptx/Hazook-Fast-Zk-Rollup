@@ -1,37 +1,5 @@
 import { createInterface } from 'readline';
-import { Rollup, RollupProof, RollupState } from '@ycryptx/rollup';
-
-export const onNewProof = async (
-  proofString: string,
-  accumulatedProof: RollupProof,
-): Promise<RollupProof> => {
-  if (!proofString) {
-    return accumulatedProof;
-  }
-
-  const proof = RollupProof.fromJSON(JSON.parse(proofString));
-
-  if (!accumulatedProof) {
-    return proof;
-  }
-
-  const currentState = new RollupState({
-    initialRoot: accumulatedProof.publicInput.initialRoot,
-    latestRoot: accumulatedProof.publicInput.latestRoot,
-  });
-
-  const newState = RollupState.createMerged(
-    currentState,
-    new RollupState({
-      initialRoot: proof.publicInput.initialRoot,
-      latestRoot: proof.publicInput.latestRoot,
-    }),
-  );
-
-  accumulatedProof = await Rollup.merge(newState, accumulatedProof, proof);
-
-  return accumulatedProof;
-};
+import { Rollup, RollupProof, Accumulator } from '@ycryptx/rollup';
 
 const onClosed = async (accumulatedProof: RollupProof): Promise<void> => {
   let accumulatedProofString = '';
@@ -45,7 +13,7 @@ const onClosed = async (accumulatedProof: RollupProof): Promise<void> => {
 export const reducer = async (): Promise<void> => {
   await Rollup.compile();
 
-  let rollupProof: RollupProof;
+  const accumulator = new Accumulator();
   const rl = createInterface({
     input: process.stdin,
   });
@@ -55,7 +23,8 @@ export const reducer = async (): Promise<void> => {
     console.error(
       `Reducer: partitionKey=${pratitionKey}, sortingKey=${sortingKey}`,
     );
-    rollupProof = await onNewProof(proofString, rollupProof);
+    const intermediateProof = RollupProof.fromJSON(JSON.parse(proofString));
+    await accumulator.addProof(intermediateProof);
   }
-  return onClosed(rollupProof);
+  return onClosed(accumulator.accumulatedProof);
 };

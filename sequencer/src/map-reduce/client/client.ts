@@ -41,11 +41,14 @@ export class MapReduceClient {
    */
   async process(inputFile: string, inputLength: number): Promise<string> {
     return this.mode == Mode.LOCAL
-      ? this.processLocal(inputFile)
+      ? this.processLocal(inputFile, inputLength)
       : this.processEmr(inputFile, inputLength);
   }
 
-  private async processLocal(inputFile: string): Promise<string> {
+  private async processLocal(
+    inputFile: string,
+    inputLength: number,
+  ): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -61,18 +64,17 @@ export class MapReduceClient {
         -D mapreduce.job.output.key.field.separator='\t' \
         -D mapreduce.map.output.key.field.separator='\t' \
         -D mapred.text.key.comparator.options=-k2,2n \
+        -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
+          inputLength,
+        )} \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
-        -output ${outputDir}`,
+        -output ${outputDir} \
+        -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
     );
 
-    // get result
-    const hadoopResult = runShellCommand(
-      `docker exec ${container} hdfs dfs -cat ${outputDir}/*`,
-    );
-
-    return (hadoopResult || '').toString().trim();
+    return this.uploader.getAccumulatedLocalHadoopOutput(container, outputDir);
   }
 
   private async processEmr(

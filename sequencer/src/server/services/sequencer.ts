@@ -1,8 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { Field, MerkleMap } from 'snarkyjs';
 import { createInterface } from 'readline';
-import { Serialized } from '@ycryptx/map-reduce-scripts';
+import { TransactionPreProcessor } from '@ycryptx/rollup';
 
 import {
   Case,
@@ -23,10 +22,7 @@ const preProcessInputFile = async (inputFile: string): Promise<string> => {
   const rl = createInterface({
     input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
   });
-
-  const merkleMap = new MerkleMap();
-
-  let currentValue = Field(0);
+  const txPreProcessor = new TransactionPreProcessor();
 
   try {
     fs.unlinkSync(path.join(__dirname, '../', preprocessedFile));
@@ -38,32 +34,13 @@ const preProcessInputFile = async (inputFile: string): Promise<string> => {
     if (!line) {
       continue;
     }
-    const initialRoot = merkleMap.getRoot();
-    const number = parseInt(line);
-    const value = Field(number);
-    const key = Field(merkleMap.tree.leafCount);
 
-    merkleMap.set(key, value);
-
-    const witness = merkleMap.getWitness(key);
-
-    witness.toJSON();
-
-    const lineToWrite: Serialized = {
-      initialRoot: initialRoot.toJSON(),
-      latestRoot: merkleMap.getRoot().toJSON(),
-      key: key.toJSON(),
-      currentValue: currentValue.toJSON(),
-      newValue: value.toJSON(),
-      merkleMapWitness: witness.toJSON(),
-    };
+    const tx = txPreProcessor.processTx(parseInt(line));
 
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${JSON.stringify(lineToWrite)}\n`,
+      `${JSON.stringify(tx.toJSON())}\n`,
     );
-
-    currentValue = value;
   }
 
   return preprocessedFile;
@@ -75,7 +52,7 @@ const preProcessInputFile = async (inputFile: string): Promise<string> => {
  */
 class Sequencer implements SequencerServiceImplementation {
   /**
-   * Implements the SayHello RPC method.
+   * Implements the demo RPC method.
    */
   demo = async (request: DemoRequest): Promise<DeepPartial<DemoResponse>> => {
     const response: DemoResponse = { result: '' };
