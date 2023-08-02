@@ -14,6 +14,7 @@ import { Uploader } from '../uploader';
 import { runShellCommand } from '../utils';
 
 const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
+const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS);
 
 export class MapReduceClient {
   private mode: Mode;
@@ -56,7 +57,6 @@ export class MapReduceClient {
     // initiate map-reduce
     runShellCommand(
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
-        -D mapred.reduce.tasks=2 \
         -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
         -D mapreduce.partition.keycomparator.options=-k1,1n \
         -D stream.num.map.output.key.fields=2 \
@@ -263,6 +263,9 @@ export class MapReduceClient {
   }
 
   public mapperParallelism(inputLength: number): number {
-    return Math.round(inputLength / 4);
+    if (inputLength < NUMBER_OF_REDUCERS) {
+      return inputLength;
+    }
+    return NUMBER_OF_REDUCERS;
   }
 }

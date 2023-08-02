@@ -32,11 +32,10 @@ const NUM_REDUCERS = 4;
 const mapper = async () => {
     await rollup_1.Rollup.compile();
     let currentReducer = 0;
-    let inputSplitCounter = 0;
+    // let inputSplitCounter = 0;
     const deriveKey = () => {
-        const key = `${currentReducer}\t${INPUT_SPLIT + inputSplitCounter}`;
+        const key = `${currentReducer}\t${INPUT_SPLIT}`;
         currentReducer = (currentReducer + 1) % NUM_REDUCERS;
-        inputSplitCounter += 1;
         return key;
     };
     const rl = (0, readline_1.createInterface)({
@@ -64,7 +63,7 @@ const mapper = async () => {
         const proofString = JSON.stringify(proof.toJSON());
         const mapKey = deriveKey();
         process.stdout.write(`${mapKey}\t${proofString}\n`);
-        console.error(`Mapper: input split=${INPUT_SPLIT}, key=${mapKey}`);
+        console.error(`Mapper: input=${serialized.newValue.toString()} split=${INPUT_SPLIT}, key=${mapKey}`);
     }
 };
 exports.mapper = mapper;

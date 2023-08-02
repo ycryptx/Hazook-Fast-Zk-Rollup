@@ -1,7 +1,4 @@
 import * as path from 'path';
-import * as fs from 'fs';
-import { createInterface } from 'readline';
-import { TransactionPreProcessor } from '@ycryptx/rollup';
 
 import {
   Case,
@@ -12,39 +9,12 @@ import {
   DeepPartial,
 } from '../compiled/services/sequencer/v1/sequencer_service';
 import { Mode, MapReduceClient } from '../../map-reduce';
+import { preProcessInputFile } from '../../map-reduce/utils';
 
-const mode = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
-const region = process.env.REGION;
-const mapReduce = new MapReduceClient(mode, region);
-
-const preProcessInputFile = async (inputFile: string): Promise<string> => {
-  const preprocessedFile = inputFile.replace('data', 'preprocessed');
-  const rl = createInterface({
-    input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
-  });
-  const txPreProcessor = new TransactionPreProcessor();
-
-  try {
-    fs.unlinkSync(path.join(__dirname, '../', preprocessedFile));
-  } catch (err) {
-    // ignore
-  }
-
-  for await (const line of rl) {
-    if (!line) {
-      continue;
-    }
-
-    const tx = txPreProcessor.processTx(parseInt(line));
-
-    fs.appendFileSync(
-      path.join(__dirname, '../', preprocessedFile),
-      `${JSON.stringify(tx.toJSON())}\n`,
-    );
-  }
-
-  return preprocessedFile;
-};
+const MODE = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
+const REGION = process.env.REGION;
+const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS);
+const mapReduce = new MapReduceClient(MODE, REGION);
 
 /**
  * sequencer
@@ -80,7 +50,10 @@ class Sequencer implements SequencerServiceImplementation {
       default:
     }
 
-    const preProcessedInputFile = await preProcessInputFile(inputFile);
+    const preProcessedInputFile = await preProcessInputFile(
+      inputFile,
+      NUMBER_OF_REDUCERS,
+    );
 
     const absPathInputFile = path.join(__dirname, '../', preProcessedInputFile);
     // uplaod data to Hadoop
