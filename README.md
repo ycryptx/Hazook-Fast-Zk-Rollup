@@ -19,4 +19,4 @@ This project demonstrates a fast zk-rollup built on Mina that can handle large a
 - Terraform provisioning, Github Actions CI/CD
 
 **Requirements**
-- The sequencer and the Mapper script (in [mapper.js](./map-reduce-scripts/src/mapper/mapper.ts)) have to be synchronized on the number of parallel reduce tasks. Make sure that `NUMBER_OF_REDUCERS` defined [here](sequencer/.env) matches the corresponding variable in [the mapper script](./map-reduce-scripts/src/mapper/mapper.ts)
+- The sequencer and the Mapper script (in [mapper.js](./map-reduce-scripts/src/mapper/mapper.ts)) have to be synchronized on the number of parallel reduce tasks. For local mode, make sure that `NUMBER_OF_REDUCERS`  [the mapper script](./map-reduce-scripts/src/mapper/mapper.ts) matches the corresponding `NUMBER_OF_REDUCERS` defined [here](sequencer/.env) for local mode, and [here for production](accumulator/infra/sequencer-nixos-config.nix)

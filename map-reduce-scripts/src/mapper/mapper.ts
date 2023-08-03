@@ -8,7 +8,7 @@ import {
 } from '@ycryptx/rollup';
 
 const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUM_REDUCERS = 4;
+const NUMBER_OF_REDUCERS = 4;
 
 export const mapper = async (): Promise<void> => {
   await Rollup.compile();
@@ -18,7 +18,7 @@ export const mapper = async (): Promise<void> => {
 
   const deriveKey = (): string => {
     const key = `${currentReducer}\t${INPUT_SPLIT}`;
-    currentReducer = (currentReducer + 1) % NUM_REDUCERS;
+    currentReducer = (currentReducer + 1) % NUMBER_OF_REDUCERS;
     return key;
   };
 

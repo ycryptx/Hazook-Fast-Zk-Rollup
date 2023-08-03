@@ -13,7 +13,7 @@ import { preProcessInputFile } from '../../map-reduce/utils';
 
 const MODE = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
 const REGION = process.env.REGION;
-const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS);
+const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS) || 4;
 const mapReduce = new MapReduceClient(MODE, REGION);
 
 /**

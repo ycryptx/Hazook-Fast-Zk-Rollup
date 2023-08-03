@@ -14,7 +14,7 @@ import { Uploader } from '../uploader';
 import { runShellCommand } from '../utils';
 
 const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
-const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS);
+const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS) || 4;
 
 export class MapReduceClient {
   private mode: Mode;
