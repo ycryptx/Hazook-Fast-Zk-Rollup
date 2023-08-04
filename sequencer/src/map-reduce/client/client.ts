@@ -57,21 +57,23 @@ export class MapReduceClient {
     // initiate map-reduce
     runShellCommand(
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
-        -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
-        -D mapreduce.partition.keycomparator.options=-k1,1n \
+        -D mapreduce.map.memory.mb=3072 \
+        -D mapreduce.reduce.memory.mb=3072 \
         -D stream.num.map.output.key.fields=2 \
-        -D map.output.key.field.separator='\t' \
-        -D mapreduce.job.output.key.field.separator='\t' \
-        -D mapreduce.map.output.key.field.separator='\t' \
-        -D mapred.text.key.comparator.options=-k2,2n \
+        -D map.output.key.field.separator=, \
+        -D mapreduce.partition.keypartitioner.options=-k1,1 \
+        -D mapreduce.partition.keycomparator.options=-k2,2n \
+        -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
         -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
           inputLength,
         )} \
+        -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
         -output ${outputDir} \
         -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
+      true,
     );
 
     return this.uploader.getAccumulatedLocalHadoopOutput(container, outputDir);
@@ -114,12 +116,20 @@ export class MapReduceClient {
               'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
-              // TODO: remove the below comment per the comment below
+              '-D',
+              'map.output.key.field.separator=,',
+              'D',
+              'mapreduce.partition.keypartitioner.options=-k1,1',
+              'D',
+              'mapreduce.partition.keycomparator.options=-k2,2n',
+              'D',
+              'mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator',
               '-D',
               `mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
                 inputLength,
               )}`,
-              //
+              '-partitioner',
+              'org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner',
               '-input',
               `s3://${inputFile}`,
               '-output',
@@ -128,9 +138,6 @@ export class MapReduceClient {
               'mapper.js',
               '-reducer',
               'reducer.js',
-              // TODO: remove the below args once https://github.com/o1-labs/snarkyjs/issues/951 is implemented.
-              // The default AWS EMR inputSplit is on every line. That means that if we have an input with 1600 lines
-              // we compile the contract 1600 times (!). So we're setting a larger input split to reduce this overhead
               '-inputformat',
               'org.apache.hadoop.mapred.lib.NLineInputFormat',
             ],

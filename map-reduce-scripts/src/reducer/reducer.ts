@@ -1,11 +1,22 @@
 import { createInterface } from 'readline';
 import { Rollup, RollupProof, Accumulator } from '@ycryptx/rollup';
 
-const onClosed = async (accumulatedProof: RollupProof): Promise<void> => {
+type OrderedAccumulatedProof = {
+  order: number;
+  proof: RollupProof;
+};
+
+const onClosed = async (
+  partitionKey: number,
+  accumulatedProof: RollupProof,
+): Promise<void> => {
   let accumulatedProofString = '';
-  if (accumulatedProof) {
-    accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
-  }
+  const orderedProof: OrderedAccumulatedProof = {
+    order: partitionKey,
+    proof: accumulatedProof,
+  };
+  accumulatedProofString = JSON.stringify(orderedProof);
+
   process.stdout.write(accumulatedProofString);
   return;
 };
@@ -17,14 +28,21 @@ export const reducer = async (): Promise<void> => {
   const rl = createInterface({
     input: process.stdin,
   });
+  let partitionKey: string;
 
   for await (const line of rl) {
-    const [pratitionKey, sortingKey, proofString] = line.split('\t');
+    const [_partitionKey, sortingKey, proofString] = line.split(',');
+    if (!partitionKey) {
+      partitionKey = _partitionKey;
+    }
     console.error(
-      `Reducer: partitionKey=${pratitionKey}, sortingKey=${sortingKey}`,
+      `Reducer: partitionKey=${_partitionKey}, sortingKey=${sortingKey}`,
     );
     const intermediateProof = RollupProof.fromJSON(JSON.parse(proofString));
     await accumulator.addProof(intermediateProof);
   }
-  return onClosed(accumulator.accumulatedProof);
+  if (accumulator.accumulatedProof) {
+    onClosed(parseInt(partitionKey), accumulator.accumulatedProof);
+  }
+  return;
 };

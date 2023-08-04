@@ -7,12 +7,14 @@ import {
   SerializedTransaction,
 } from '@ycryptx/rollup';
 
-export const runShellCommand = (cmd: string): string => {
+export const runShellCommand = (cmd: string, log?: boolean): string => {
   try {
     const result = execSync(cmd);
     return (result || '').toString();
   } catch (err) {
-    console.error(err);
+    if (log) {
+      console.error(err);
+    }
     return undefined;
   }
 };

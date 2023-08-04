@@ -51,17 +51,21 @@ export class Uploader {
         `docker exec ${container} hdfs dfs -cat ${outputDir}/*`,
       );
       if (hadoopResults) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * 60 * 3)); // hack
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000 * 30));
     }
-    const splitHadoopResults = hadoopResults.split('\t\n');
+    const splitHadoopResults = hadoopResults
+      .split('\t\n')
+      .filter((res) => res != '');
     const serializedHadoopResults = splitHadoopResults.map((proofString) =>
       JSON.parse(proofString),
     );
-    const accumulatedProof = await this.accumulateProofs(
-      serializedHadoopResults,
-    );
+    const sortedProofs = serializedHadoopResults
+      .sort((res1, res2) => res1.order - res2.order)
+      .map((res) => res.proof);
+    const accumulatedProof = await this.accumulateProofs(sortedProofs);
 
     return JSON.stringify(accumulatedProof.toJSON());
   }

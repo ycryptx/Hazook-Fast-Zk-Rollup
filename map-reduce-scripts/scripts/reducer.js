@@ -26,11 +26,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reducer = void 0;
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(332);
-const onClosed = async (accumulatedProof) => {
+const onClosed = async (partitionKey, accumulatedProof) => {
     let accumulatedProofString = '';
-    if (accumulatedProof) {
-        accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
-    }
+    const orderedProof = {
+        order: partitionKey,
+        proof: accumulatedProof,
+    };
+    accumulatedProofString = JSON.stringify(orderedProof);
     process.stdout.write(accumulatedProofString);
     return;
 };
@@ -40,13 +42,20 @@ const reducer = async () => {
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
+    let partitionKey;
     for await (const line of rl) {
-        const [pratitionKey, sortingKey, proofString] = line.split('\t');
-        console.error(`Reducer: partitionKey=${pratitionKey}, sortingKey=${sortingKey}`);
+        const [_partitionKey, sortingKey, proofString] = line.split(',');
+        if (!partitionKey) {
+            partitionKey = _partitionKey;
+        }
+        console.error(`Reducer: partitionKey=${_partitionKey}, sortingKey=${sortingKey}`);
         const intermediateProof = rollup_1.RollupProof.fromJSON(JSON.parse(proofString));
         await accumulator.addProof(intermediateProof);
     }
-    return onClosed(accumulator.accumulatedProof);
+    if (accumulator.accumulatedProof) {
+        onClosed(parseInt(partitionKey), accumulator.accumulatedProof);
+    }
+    return;
 };
 exports.reducer = reducer;
 //# sourceMappingURL=reducer.js.map
@@ -66,10 +75,10 @@ class RollupState extends (0, snarkyjs_1.Struct)({
 }) {
     static createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
         const [witnessRootBefore, witnessKey] = merkleMapWitness.computeRootAndKey(currentValue);
-        initialRoot.assertEquals(witnessRootBefore);
-        witnessKey.assertEquals(key);
+        initialRoot.assertEquals(witnessRootBefore, 'createOneStep: initialRoot == witnessRootBefore');
+        witnessKey.assertEquals(key, 'createOneStep: witnessKey == key');
         const [witnessRootAfter, _] = merkleMapWitness.computeRootAndKey(newValue);
-        latestRoot.assertEquals(witnessRootAfter);
+        latestRoot.assertEquals(witnessRootAfter, 'createOneStep: latestRoot == witnessRootAfter');
         return new RollupState({
             initialRoot,
             latestRoot,
@@ -82,8 +91,8 @@ class RollupState extends (0, snarkyjs_1.Struct)({
         });
     }
     static assertEquals(state1, state2) {
-        state1.initialRoot.assertEquals(state2.initialRoot);
-        state1.latestRoot.assertEquals(state2.latestRoot);
+        state1.initialRoot.assertEquals(state2.initialRoot, 'RollupState: initialRoot1 == initialRoot2');
+        state1.latestRoot.assertEquals(state2.latestRoot, 'RollupState: latestRoot1 == latestRoot2');
     }
 }
 exports.RollupState = RollupState;
@@ -103,9 +112,9 @@ exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
             method(newState, rollup1proof, rollup2proof) {
                 rollup1proof.verify(); // A -> B
                 rollup2proof.verify(); // B -> C
-                rollup1proof.publicInput.initialRoot.assertEquals(newState.initialRoot);
-                rollup1proof.publicInput.latestRoot.assertEquals(rollup2proof.publicInput.initialRoot);
-                rollup2proof.publicInput.latestRoot.assertEquals(newState.latestRoot);
+                rollup1proof.publicInput.initialRoot.assertEquals(newState.initialRoot, 'merge: rollup1Proof.initialRoot == newState.initialRoot');
+                rollup1proof.publicInput.latestRoot.assertEquals(rollup2proof.publicInput.initialRoot, 'merge: rollup1Proof.latestRoot == rollup2Proof.initialRoot');
+                rollup2proof.publicInput.latestRoot.assertEquals(newState.latestRoot, 'merge: rollup2Proof.latestRoot == newState.latestRoot');
             },
         },
     },
@@ -162,6 +171,7 @@ class Accumulator {
     async addProof(proof) {
         if (!this._accumulatedProof) {
             this._accumulatedProof = proof;
+            return;
         }
         const currentState = new RollupState({
             initialRoot: this._accumulatedProof.publicInput.initialRoot,
