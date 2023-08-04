@@ -26,11 +26,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reducer = void 0;
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(332);
-const onClosed = async (accumulatedProof) => {
+const onClosed = async (partitionKey, accumulatedProof) => {
     let accumulatedProofString = '';
-    if (accumulatedProof) {
-        accumulatedProofString = JSON.stringify(accumulatedProof.toJSON());
-    }
+    const orderedProof = {
+        order: partitionKey,
+        proof: accumulatedProof,
+    };
+    accumulatedProofString = JSON.stringify(orderedProof);
     process.stdout.write(accumulatedProofString);
     return;
 };
@@ -40,13 +42,20 @@ const reducer = async () => {
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
+    let partitionKey;
     for await (const line of rl) {
-        const [pratitionKey, sortingKey, proofString] = line.split('\t');
-        console.error(`Reducer: partitionKey=${pratitionKey}, sortingKey=${sortingKey}`);
+        const [_partitionKey, sortingKey, proofString] = line.split(',');
+        if (!partitionKey) {
+            partitionKey = _partitionKey;
+        }
+        console.error(`Reducer: partitionKey=${_partitionKey}, sortingKey=${sortingKey}`);
         const intermediateProof = rollup_1.RollupProof.fromJSON(JSON.parse(proofString));
         await accumulator.addProof(intermediateProof);
     }
-    return onClosed(accumulator.accumulatedProof);
+    if (accumulator.accumulatedProof) {
+        onClosed(parseInt(partitionKey), accumulator.accumulatedProof);
+    }
+    return;
 };
 exports.reducer = reducer;
 //# sourceMappingURL=reducer.js.map

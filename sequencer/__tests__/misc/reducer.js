@@ -9,9 +9,11 @@ const rl = (0, readline_1.createInterface)({
 // variable used as an accumulator
 const summary = {
     count: 0,
+    previous: 0
 };
 const processData = (line) => {
-    const [,, val] = line.split('\t');
+    const [partitionKey,sortingKey, val] = line.split(',');
+    console.error(`REDUCER Partition=${partitionKey} Sorting=${sortingKey} value=${val}`)
     const num = parseInt(val);
     summary.count += num;
 };

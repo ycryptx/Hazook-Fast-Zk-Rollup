@@ -34,7 +34,7 @@ const mapper = async () => {
     let currentReducer = 0;
     // let inputSplitCounter = 0;
     const deriveKey = () => {
-        const key = `${currentReducer}\t${INPUT_SPLIT}`;
+        const key = `${currentReducer},${INPUT_SPLIT}`;
         currentReducer = (currentReducer + 1) % NUMBER_OF_REDUCERS;
         return key;
     };
@@ -62,7 +62,7 @@ const mapper = async () => {
         const proof = await rollup_1.Rollup.oneStep(state, serialized.initialRoot, serialized.latestRoot, serialized.key, serialized.currentValue, serialized.newValue, serialized.merkleMapWitness);
         const proofString = JSON.stringify(proof.toJSON());
         const mapKey = deriveKey();
-        process.stdout.write(`${mapKey}\t${proofString}\n`);
+        process.stdout.write(`${mapKey},${proofString}\n`);
         console.error(`Mapper: input=${serialized.newValue.toString()} split=${INPUT_SPLIT}, key=${mapKey}`);
     }
 };

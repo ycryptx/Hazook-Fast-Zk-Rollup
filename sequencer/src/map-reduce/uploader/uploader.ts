@@ -62,9 +62,10 @@ export class Uploader {
     const serializedHadoopResults = splitHadoopResults.map((proofString) =>
       JSON.parse(proofString),
     );
-    const accumulatedProof = await this.accumulateProofs(
-      serializedHadoopResults,
-    );
+    const sortedProofs = serializedHadoopResults
+      .sort((res1, res2) => res1.order - res2.order)
+      .map((res) => res.proof);
+    const accumulatedProof = await this.accumulateProofs(sortedProofs);
 
     return JSON.stringify(accumulatedProof.toJSON());
   }

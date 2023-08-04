@@ -17,7 +17,7 @@ export const mapper = async (): Promise<void> => {
   // let inputSplitCounter = 0;
 
   const deriveKey = (): string => {
-    const key = `${currentReducer}\t${INPUT_SPLIT}`;
+    const key = `${currentReducer},${INPUT_SPLIT}`;
     currentReducer = (currentReducer + 1) % NUMBER_OF_REDUCERS;
     return key;
   };
@@ -61,7 +61,7 @@ export const mapper = async (): Promise<void> => {
     );
     const proofString = JSON.stringify(proof.toJSON());
     const mapKey = deriveKey();
-    process.stdout.write(`${mapKey}\t${proofString}\n`);
+    process.stdout.write(`${mapKey},${proofString}\n`);
     console.error(
       `Mapper: input=${serialized.newValue.toString()} split=${INPUT_SPLIT}, key=${mapKey}`,
     );
