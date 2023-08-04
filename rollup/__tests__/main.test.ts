@@ -5,6 +5,8 @@ import {
   RollupState,
   RollupProof,
   TransactionPreProcessor,
+  Accumulator,
+  SerializedTransaction,
 } from '../src';
 
 const txs = [0, 1, 2, 3, 4, 5, 6, 7];
@@ -28,56 +30,40 @@ describe('rollup', () => {
 
       const txPreProcessor = new TransactionPreProcessor();
       const intermediateProofs: RollupProof[] = [];
+      const accumulator = new Accumulator();
 
-      for (const iTx of txs) {
-        const tx = txPreProcessor.processTx(iTx);
-
+      const intermediateTxs: SerializedTransaction[] = [];
+      for (const tx of txs) {
+        const iTx = txPreProcessor.processTx(tx);
+        intermediateTxs.push(iTx);
+      }
+      for (const iTx of intermediateTxs) {
         const state = new RollupState({
-          initialRoot: tx.initialRoot,
-          latestRoot: tx.latestRoot,
+          initialRoot: iTx.initialRoot,
+          latestRoot: iTx.latestRoot,
         });
 
         const start = Date.now();
         const iProof = await Rollup.oneStep(
           state,
-          tx.initialRoot,
-          tx.latestRoot,
-          tx.key,
-          tx.currentValue,
-          tx.newValue,
-          tx.merkleMapWitness,
+          iTx.initialRoot,
+          iTx.latestRoot,
+          iTx.key,
+          iTx.currentValue,
+          iTx.newValue,
+          iTx.merkleMapWitness,
         );
         oneStepRunningTimes.push(Date.now() - start);
         intermediateProofs.push(iProof);
       }
 
-      let accumulatedProof: RollupProof;
-      for (const proof of intermediateProofs) {
-        if (!accumulatedProof) {
-          accumulatedProof = proof;
-        }
-        const currentState = new RollupState({
-          initialRoot: accumulatedProof.publicInput.initialRoot,
-          latestRoot: accumulatedProof.publicInput.latestRoot,
-        });
-
-        const newState = RollupState.createMerged(
-          currentState,
-          new RollupState({
-            initialRoot: proof.publicInput.initialRoot,
-            latestRoot: proof.publicInput.latestRoot,
-          }),
-        );
+      for (const iProof of intermediateProofs) {
         const start = Date.now();
-        accumulatedProof = await Rollup.merge(
-          newState,
-          accumulatedProof,
-          proof,
-        );
+        await accumulator.addProof(iProof);
         mergeRunningTimes.push(Date.now() - start);
       }
 
-      console.log(JSON.stringify(accumulatedProof.toJSON()));
+      console.log(JSON.stringify(accumulator.accumulatedProof.toJSON()));
 
       console.log(
         'oneStep avg proving times',
@@ -89,15 +75,17 @@ describe('rollup', () => {
         mergeRunningTimes.reduce((a, b) => a + b, 0) / mergeRunningTimes.length,
       );
 
-      expect(await Rollup.verify(accumulatedProof)).toBeTruthy();
-      expect(accumulatedProof.publicInput.latestRoot.toString()).toEqual(
+      expect(await Rollup.verify(accumulator.accumulatedProof)).toBeTruthy();
+      expect(
+        accumulator.accumulatedProof.publicInput.latestRoot.toString(),
+      ).toEqual(
         intermediateProofs[
           intermediateProofs.length - 1
         ].publicInput.latestRoot.toString(),
       );
-      expect(accumulatedProof.publicInput.initialRoot.toString()).toEqual(
-        intermediateProofs[0].publicInput.initialRoot.toString(),
-      );
+      expect(
+        accumulator.accumulatedProof.publicInput.initialRoot.toString(),
+      ).toEqual(intermediateProofs[0].publicInput.initialRoot.toString());
     },
     1000 * 60 * 100,
   );

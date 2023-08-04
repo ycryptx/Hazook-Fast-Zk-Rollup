@@ -22,10 +22,16 @@ export class RollupState extends Struct({
   ): RollupState {
     const [witnessRootBefore, witnessKey] =
       merkleMapWitness.computeRootAndKey(currentValue);
-    initialRoot.assertEquals(witnessRootBefore);
-    witnessKey.assertEquals(key);
+    initialRoot.assertEquals(
+      witnessRootBefore,
+      'createOneStep: initialRoot == witnessRootBefore',
+    );
+    witnessKey.assertEquals(key, 'createOneStep: witnessKey == key');
     const [witnessRootAfter, _] = merkleMapWitness.computeRootAndKey(newValue);
-    latestRoot.assertEquals(witnessRootAfter);
+    latestRoot.assertEquals(
+      witnessRootAfter,
+      'createOneStep: latestRoot == witnessRootAfter',
+    );
 
     return new RollupState({
       initialRoot,
@@ -41,8 +47,14 @@ export class RollupState extends Struct({
   }
 
   static assertEquals(state1: RollupState, state2: RollupState): void {
-    state1.initialRoot.assertEquals(state2.initialRoot);
-    state1.latestRoot.assertEquals(state2.latestRoot);
+    state1.initialRoot.assertEquals(
+      state2.initialRoot,
+      'RollupState: initialRoot1 == initialRoot2',
+    );
+    state1.latestRoot.assertEquals(
+      state2.latestRoot,
+      'RollupState: latestRoot1 == latestRoot2',
+    );
   }
 }
 
@@ -86,13 +98,20 @@ export const Rollup = Experimental.ZkProgram({
         rollup1proof.verify(); // A -> B
         rollup2proof.verify(); // B -> C
 
-        rollup1proof.publicInput.initialRoot.assertEquals(newState.initialRoot);
+        rollup1proof.publicInput.initialRoot.assertEquals(
+          newState.initialRoot,
+          'merge: rollup1Proof.initialRoot == newState.initialRoot',
+        );
 
         rollup1proof.publicInput.latestRoot.assertEquals(
           rollup2proof.publicInput.initialRoot,
+          'merge: rollup1Proof.latestRoot == rollup2Proof.initialRoot',
         );
 
-        rollup2proof.publicInput.latestRoot.assertEquals(newState.latestRoot);
+        rollup2proof.publicInput.latestRoot.assertEquals(
+          newState.latestRoot,
+          'merge: rollup2Proof.latestRoot == newState.latestRoot',
+        );
       },
     },
   },
@@ -189,6 +208,7 @@ export class Accumulator {
   public async addProof(proof: RollupProof): Promise<void> {
     if (!this._accumulatedProof) {
       this._accumulatedProof = proof;
+      return;
     }
 
     const currentState = new RollupState({

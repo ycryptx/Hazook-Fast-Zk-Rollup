@@ -58,6 +58,8 @@ export class MapReduceClient {
     runShellCommand(
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
         -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
+        -D mapreduce.map.memory.mb=3072 \
+        -D mapreduce.reduce.memory.mb=3072 \
         -D mapreduce.partition.keycomparator.options=-k1,1n \
         -D stream.num.map.output.key.fields=2 \
         -D map.output.key.field.separator='\t' \
@@ -72,6 +74,7 @@ export class MapReduceClient {
         -input ${inputFile} \
         -output ${outputDir} \
         -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
+      true,
     );
 
     return this.uploader.getAccumulatedLocalHadoopOutput(container, outputDir);
