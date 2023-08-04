@@ -57,18 +57,18 @@ export class MapReduceClient {
     // initiate map-reduce
     runShellCommand(
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
-        -D mapred.output.key.comparator.class=org.apache.hadoop.mapred.lib.KeyFieldBasedComparator \
         -D mapreduce.map.memory.mb=3072 \
         -D mapreduce.reduce.memory.mb=3072 \
-        -D mapreduce.partition.keycomparator.options=-k1,1n \
         -D stream.num.map.output.key.fields=2 \
         -D map.output.key.field.separator='\t' \
         -D mapreduce.job.output.key.field.separator='\t' \
         -D mapreduce.map.output.key.field.separator='\t' \
-        -D mapred.text.key.comparator.options=-k2,2n \
+        -D mapred.partition.keycomparator.options=-k1,1n \
+        -D mapred.text.key.comparator.options=-k2,1nr \
         -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
           inputLength,
         )} \
+        -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
