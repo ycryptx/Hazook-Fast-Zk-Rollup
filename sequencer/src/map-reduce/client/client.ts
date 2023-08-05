@@ -64,9 +64,7 @@ export class MapReduceClient {
         -D mapreduce.partition.keypartitioner.options=-k1,1 \
         -D mapreduce.partition.keycomparator.options=-k2,2n \
         -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
-        -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
-          inputLength,
-        )} \
+        -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism()} \
         -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
@@ -116,18 +114,6 @@ export class MapReduceClient {
               'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
-              '-D',
-              'map.output.key.field.separator=,',
-              'D',
-              'mapreduce.partition.keypartitioner.options=-k1,1',
-              'D',
-              'mapreduce.partition.keycomparator.options=-k2,2n',
-              'D',
-              'mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator',
-              '-D',
-              `mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism(
-                inputLength,
-              )}`,
               '-partitioner',
               'org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner',
               '-input',
@@ -202,6 +188,12 @@ export class MapReduceClient {
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
+            'map.output.key.field.separator': ',',
+            'mapreduce.partition.keypartitioner.options': '-k1,1',
+            'mapreduce.partition.keycomparator.options': '-k2,2n',
+            'mapreduce.job.output.key.comparator.class':
+              'org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator',
+            'mapreduce.input.lineinputformat.linespermap': `${this.mapperParallelism()}`,
           },
         },
       ],
@@ -261,10 +253,7 @@ export class MapReduceClient {
     console.log('EMR Cluster is ready');
   }
 
-  public mapperParallelism(inputLength: number): number {
-    if (inputLength < NUMBER_OF_REDUCERS) {
-      return inputLength;
-    }
+  public mapperParallelism(): number {
     return NUMBER_OF_REDUCERS;
   }
 }
