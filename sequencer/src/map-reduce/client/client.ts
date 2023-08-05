@@ -196,20 +196,12 @@ export class MapReduceClient {
           Properties: {
             'mapreduce.map.cpu.vcores': '1',
             'mapreduce.reduce.cpu.vcores': '1',
-            'mapreduce.map.memory.mb': '6144',
-            'mapreduce.reduce.memory.mb': '6144',
+            'mapreduce.map.memory.mb': '3072',
+            'mapreduce.reduce.memory.mb': '3072',
             'mapreduce.task.timeout': '0',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
-            'mapred.output.key.comparator.class':
-              'org.apache.hadoop.mapred.lib.KeyFieldBasedComparator',
-            'mapreduce.partition.keycomparator.options': '-k1,1n',
-            'stream.num.map.output.key.fields': '2',
-            'map.output.key.field.separator': '\t',
-            'mapreduce.job.output.key.field.separator': '\t',
-            'mapreduce.map.output.key.field.separator': '\t',
-            'mapred.text.key.comparator.options': '-k2,2n',
           },
         },
       ],

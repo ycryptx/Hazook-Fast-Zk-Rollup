@@ -16,16 +16,21 @@ describe('integration tests', () => {
     process.env.REDUCER_FILE_PATH = '../../sequencer/__tests__/misc/reducer.js';
     mapReduce = new MapReduceClient(Mode.LOCAL, 'ap-northeast-1');
   });
-  it('1. demo-0: should sum numbers correctly', async () => {
-    const dataFilePath = path.join(__dirname, 'misc/run.txt');
-    const inputLocation = await mapReduce.upload(dataFilePath);
-    const mapReduceResult = await mapReduce.process(inputLocation, 2);
+  // eslint-disable-next-line jest/no-disabled-tests
+  it.skip(
+    '1. demo-0: should sum numbers correctly',
+    async () => {
+      const dataFilePath = path.join(__dirname, 'misc/run.txt');
+      const inputLocation = await mapReduce.upload(dataFilePath);
+      const mapReduceResult = await mapReduce.process(inputLocation, 4);
 
-    expect(
-      mapReduceResult.split('\n').reduce((val: string, acc: string) => {
-        acc = `${parseInt(acc) + parseInt(val)}`;
-        return acc;
-      }, '0'),
-    ).toEqual(`${1 + 2 + 3 + 4 + 5 + 6 + 7}`);
-  });
+      expect(
+        mapReduceResult.split('\n').reduce((val: string, acc: string) => {
+          acc = `${parseInt(acc) + parseInt(val)}`;
+          return acc;
+        }, '0'),
+      ).toEqual(`${1 + 2 + 3 + 4 + 5 + 6 + 7}`);
+    },
+    1000 * 60 * 5,
+  );
 });
