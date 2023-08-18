@@ -1,7 +1,9 @@
 import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as randString from 'randomstring';
 import { createInterface } from 'readline';
+import { MerkleTree, PrivateKey, Poseidon } from 'snarkyjs';
 import { TransactionPreProcessor } from '@ycryptx/rollup';
 
 export const runShellCommand = (cmd: string, log?: boolean): string => {
@@ -26,6 +28,10 @@ export const preProcessRawTransactions = async (
   });
   const txPreProcessor = new TransactionPreProcessor();
 
+  const votersTree = new MerkleTree(20);
+
+  const voters: PrivateKey[] = [];
+
   try {
     fs.unlinkSync(path.join(__dirname, '../', preprocessedFile));
   } catch (err) {
@@ -37,7 +43,19 @@ export const preProcessRawTransactions = async (
     if (!line) {
       continue;
     }
-    const tx = txPreProcessor.processTx(parseInt(line));
+    voters.push(PrivateKey.random());
+    votersTree.setLeaf(
+      BigInt(lineNumber),
+      Poseidon.hash(voters[lineNumber].toPublicKey().toFields()),
+    );
+
+    const tx = txPreProcessor.processTx({
+      voteYes: line == '1',
+      privateKey: voters[lineNumber].toJSON(),
+      randomness: `${randString.generate(5)}`,
+      voters: votersTree,
+      voterIndex: lineNumber,
+    });
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
       `${lineNumber}\t${sequentialism}\t${'0'}\t${JSON.stringify(

@@ -1,4 +1,11 @@
-import { Field, MerkleMapWitness } from 'snarkyjs';
+import {
+  Bool,
+  Field,
+  MerkleMapWitness,
+  PrivateKey,
+  Provable,
+  Poseidon,
+} from 'snarkyjs';
 import { createInterface } from 'readline';
 import {
   Rollup,
@@ -6,6 +13,7 @@ import {
   JSONSerializedTransaction,
   SerializedTransaction,
   RollupProof,
+  MerkleWitness1000,
 } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
@@ -54,31 +62,38 @@ export const mapper = async (): Promise<void> => {
     const jsonSerialized: JSONSerializedTransaction = JSON.parse(data);
 
     const serialized = new SerializedTransaction({
-      initialRoot: Field(jsonSerialized.initialRoot),
-      latestRoot: Field(jsonSerialized.latestRoot),
-      key: Field(jsonSerialized.key),
-      currentValue: Field(jsonSerialized.currentValue),
-      newValue: Field(jsonSerialized.newValue),
-      merkleMapWitness: MerkleMapWitness.fromJSON(
-        jsonSerialized.merkleMapWitness,
+      voteYes: Bool(jsonSerialized.voteYes),
+      privateKey: PrivateKey.fromJSON(jsonSerialized.privateKey),
+      randomness: Field(jsonSerialized.randomness),
+      initialNullifierRoot: Field(jsonSerialized.initialNullifierRoot),
+      latestNullifierRoot: Field(jsonSerialized.latestNullifierRoot),
+      voterWitness: MerkleWitness1000.fromJSON(jsonSerialized.voterWitness),
+      nullifierWitness: MerkleMapWitness.fromJSON(
+        jsonSerialized.nullifierWitness,
       ),
     });
 
+    const votersRoot = serialized.voterWitness.calculateRoot(
+      Poseidon.hash(serialized.privateKey.toPublicKey().toFields()),
+    );
+
     const state = new RollupState({
-      initialRoot: serialized.initialRoot,
-      latestRoot: serialized.latestRoot,
+      voteYes: Provable.if(serialized.voteYes, Field, Field(1), Field(0)),
+      voteNo: Provable.if(serialized.voteYes.not(), Field, Field(1), Field(0)),
+      votersRoot,
+      initialNullifierRoot: serialized.initialNullifierRoot,
+      latestNullifierRoot: serialized.latestNullifierRoot,
     });
     let proof: RollupProof;
     logger('mapper', `proving ${lineNumber}`);
     try {
       proof = await Rollup.oneStep(
         state,
-        serialized.initialRoot,
-        serialized.latestRoot,
-        serialized.key,
-        serialized.currentValue,
-        serialized.newValue,
-        serialized.merkleMapWitness,
+        serialized.privateKey,
+        serialized.voteYes,
+        serialized.randomness,
+        serialized.voterWitness,
+        serialized.nullifierWitness,
       );
     } catch (err) {
       logger('mapper', `failed to prove ${lineNumber} ${err}`);
