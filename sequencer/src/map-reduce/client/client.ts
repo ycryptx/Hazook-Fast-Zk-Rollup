@@ -56,7 +56,6 @@ export class MapReduceClient {
         -D mapreduce.map.memory.mb=3072 \
         -D mapreduce.reduce.memory.mb=3072 \
         -D stream.num.map.output.key.fields=2 \
-        -D map.output.key.field.separator=, \
         -D mapreduce.partition.keypartitioner.options=-k1,1 \
         -D mapreduce.partition.keycomparator.options=-k2,2n \
         -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
@@ -177,7 +176,7 @@ export class MapReduceClient {
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
-            'map.output.key.field.separator': ',',
+            'stream.num.map.output.key.fields': '2',
             'mapreduce.partition.keypartitioner.options': '-k1,1',
             'mapreduce.partition.keycomparator.options': '-k2,2n',
             'mapreduce.job.output.key.comparator.class':

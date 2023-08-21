@@ -31,7 +31,7 @@ const mapper = async () => {
     await rollup_1.Rollup.compile();
     const deriveKey = (lineNumber, parallelism) => {
         const reducerId = lineNumber - (lineNumber % parallelism);
-        const key = `${reducerId},${lineNumber}`;
+        const key = `${reducerId}\t${lineNumber}`;
         return key;
     };
     const rl = (0, readline_1.createInterface)({
@@ -58,7 +58,7 @@ const mapper = async () => {
         });
         const proof = await rollup_1.Rollup.oneStep(state, serialized.initialRoot, serialized.latestRoot, serialized.key, serialized.currentValue, serialized.newValue, serialized.merkleMapWitness);
         const proofString = JSON.stringify(proof.toJSON());
-        process.stdout.write(`${mapKey},${proofString}\n`);
+        process.stdout.write(`${mapKey}\t${proofString}\n`);
         console.error(`Mapper: input=${serialized.newValue.toString()} key=${mapKey}`);
     }
 };

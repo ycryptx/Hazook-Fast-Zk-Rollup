@@ -44,7 +44,7 @@ const reducer = async () => {
     });
     let partitionKey;
     for await (const line of rl) {
-        const [_partitionKey, sortingKey, proofString] = line.split(',');
+        const [_partitionKey, sortingKey, proofString] = line.split('\t');
         if (!partitionKey) {
             partitionKey = _partitionKey;
         }

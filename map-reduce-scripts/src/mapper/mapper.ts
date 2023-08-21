@@ -12,7 +12,7 @@ export const mapper = async (): Promise<void> => {
 
   const deriveKey = (lineNumber: number, parallelism: number): string => {
     const reducerId = lineNumber - (lineNumber % parallelism);
-    const key = `${reducerId},${lineNumber}`;
+    const key = `${reducerId}\t${lineNumber}`;
     return key;
   };
 
@@ -57,7 +57,7 @@ export const mapper = async (): Promise<void> => {
       serialized.merkleMapWitness,
     );
     const proofString = JSON.stringify(proof.toJSON());
-    process.stdout.write(`${mapKey},${proofString}\n`);
+    process.stdout.write(`${mapKey}\t${proofString}\n`);
     console.error(
       `Mapper: input=${serialized.newValue.toString()} key=${mapKey}`,
     );
