@@ -27,26 +27,23 @@ exports.mapper = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(332);
-const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUMBER_OF_REDUCERS = 4;
 const mapper = async () => {
     await rollup_1.Rollup.compile();
-    let currentReducer = 0;
-    // let inputSplitCounter = 0;
-    const deriveKey = () => {
-        const key = `${currentReducer},${INPUT_SPLIT}`;
-        currentReducer = (currentReducer + 1) % NUMBER_OF_REDUCERS;
+    const deriveKey = (lineNumber, parallelism) => {
+        const reducerId = lineNumber - (lineNumber % parallelism);
+        const key = `${reducerId},${lineNumber}`;
         return key;
     };
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
     });
     for await (const line of rl) {
-        const [, value] = line.split('\t'); // mapper input is in k:v form of offset \t line due to NLineInputFormat
-        if (!value) {
+        if (!line) {
             continue;
         }
-        const jsonSerialized = JSON.parse(value);
+        const [lineNumber, parallelism, data] = line.split('\t');
+        const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
+        const jsonSerialized = JSON.parse(data);
         const serialized = new rollup_1.SerializedTransaction({
             initialRoot: (0, snarkyjs_1.Field)(jsonSerialized.initialRoot),
             latestRoot: (0, snarkyjs_1.Field)(jsonSerialized.latestRoot),
@@ -61,9 +58,8 @@ const mapper = async () => {
         });
         const proof = await rollup_1.Rollup.oneStep(state, serialized.initialRoot, serialized.latestRoot, serialized.key, serialized.currentValue, serialized.newValue, serialized.merkleMapWitness);
         const proofString = JSON.stringify(proof.toJSON());
-        const mapKey = deriveKey();
         process.stdout.write(`${mapKey},${proofString}\n`);
-        console.error(`Mapper: input=${serialized.newValue.toString()} split=${INPUT_SPLIT}, key=${mapKey}`);
+        console.error(`Mapper: input=${serialized.newValue.toString()} key=${mapKey}`);
     }
 };
 exports.mapper = mapper;

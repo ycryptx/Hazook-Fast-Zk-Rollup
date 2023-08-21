@@ -22,7 +22,7 @@ describe('integration tests', () => {
     async () => {
       const dataFilePath = path.join(__dirname, 'misc/run.txt');
       const inputLocation = await mapReduce.upload(dataFilePath);
-      const mapReduceResult = await mapReduce.process(inputLocation, 4);
+      const mapReduceResult = await mapReduce.process(inputLocation);
 
       expect(
         mapReduceResult.split('\n').reduce((val: string, acc: string) => {

@@ -2,10 +2,7 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createInterface } from 'readline';
-import {
-  TransactionPreProcessor,
-  SerializedTransaction,
-} from '@ycryptx/rollup';
+import { TransactionPreProcessor } from '@ycryptx/rollup';
 
 export const runShellCommand = (cmd: string, log?: boolean): string => {
   try {
@@ -21,10 +18,10 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
 
 export const preProcessInputFile = async (
   inputFile: string,
-  numberOfReducers: number,
 ): Promise<string> => {
+  const totalLines = await countLinesInFile(inputFile);
+  const parallelism = totalLines / 4; // given enough cluster cores a single reducer will not process more than 4 proofs
   const preprocessedFile = inputFile.replace('data', 'preprocessed');
-  const txs: SerializedTransaction[] = [];
   const rl = createInterface({
     input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
   });
@@ -36,28 +33,31 @@ export const preProcessInputFile = async (
     // ignore
   }
 
+  let lineNumber = 0;
   for await (const line of rl) {
     if (!line) {
       continue;
     }
-
     const tx = txPreProcessor.processTx(parseInt(line));
-    txs.push(tx);
-  }
-
-  const reorderedTxs = splitReorder<SerializedTransaction>(
-    txs,
-    numberOfReducers,
-  );
-
-  for (const tx of reorderedTxs) {
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${JSON.stringify(tx.toJSON())}\n`,
+      `${lineNumber}\t${parallelism}\t${JSON.stringify(tx.toJSON())}\n`,
     );
+    lineNumber += 1;
   }
 
   return preprocessedFile;
+};
+
+const countLinesInFile = async (file: string): Promise<number> => {
+  const rl = createInterface({
+    input: fs.createReadStream(path.join(__dirname, '../', file)),
+  });
+  let lines = 0;
+  for await (const _ of rl) {
+    lines += 1;
+  }
+  return lines;
 };
 
 export function splitReorder<T>(txs: T[], splits: number): T[] {

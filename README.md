@@ -17,6 +17,3 @@ This project demonstrates a fast zk-rollup built on Mina that can handle large a
 - An AWS EMR managed Hadoop Streaming cluster running in the same virtual network as the sequencer
 - Parallelizes the computation of state proofs and reduces them into a single state proof recursively
 - Terraform provisioning, Github Actions CI/CD
-
-**Requirements**
-- The sequencer and the Mapper script (in [mapper.js](./map-reduce-scripts/src/mapper/mapper.ts)) have to be synchronized on the number of parallel reduce tasks. For local mode, make sure that `NUMBER_OF_REDUCERS`  [the mapper script](./map-reduce-scripts/src/mapper/mapper.ts) matches the corresponding `NUMBER_OF_REDUCERS` defined [here](sequencer/.env) for local mode, and [here for production](accumulator/infra/sequencer-nixos-config.nix)

@@ -14,7 +14,6 @@ import { Uploader } from '../uploader';
 import { runShellCommand } from '../utils';
 
 const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
-const NUMBER_OF_REDUCERS = parseInt(process.env.NUMBER_OF_REDUCERS) || 4;
 
 export class MapReduceClient {
   private mode: Mode;
@@ -40,16 +39,13 @@ export class MapReduceClient {
    * @param inputFile the location of the input file that Map-Reduce should process
    * @returns the result of the MapReduce
    */
-  async process(inputFile: string, inputLength: number): Promise<string> {
+  async process(inputFile: string): Promise<string> {
     return this.mode == Mode.LOCAL
-      ? this.processLocal(inputFile, inputLength)
-      : this.processEmr(inputFile, inputLength);
+      ? this.processLocal(inputFile)
+      : this.processEmr(inputFile);
   }
 
-  private async processLocal(
-    inputFile: string,
-    inputLength: number,
-  ): Promise<string> {
+  private async processLocal(inputFile: string): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -64,23 +60,18 @@ export class MapReduceClient {
         -D mapreduce.partition.keypartitioner.options=-k1,1 \
         -D mapreduce.partition.keycomparator.options=-k2,2n \
         -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
-        -D mapreduce.input.lineinputformat.linespermap=${this.mapperParallelism()} \
         -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
-        -output ${outputDir} \
-        -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
+        -output ${outputDir}`,
       true,
     );
 
     return this.uploader.getAccumulatedLocalHadoopOutput(container, outputDir);
   }
 
-  private async processEmr(
-    inputFile: string,
-    inputLength: number,
-  ): Promise<string> {
+  private async processEmr(inputFile: string): Promise<string> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({
@@ -124,8 +115,6 @@ export class MapReduceClient {
               'mapper.js',
               '-reducer',
               'reducer.js',
-              '-inputformat',
-              'org.apache.hadoop.mapred.lib.NLineInputFormat',
             ],
           },
           ActionOnFailure: 'CONTINUE',
@@ -193,7 +182,6 @@ export class MapReduceClient {
             'mapreduce.partition.keycomparator.options': '-k2,2n',
             'mapreduce.job.output.key.comparator.class':
               'org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator',
-            'mapreduce.input.lineinputformat.linespermap': `${this.mapperParallelism()}`,
           },
         },
       ],
@@ -251,9 +239,5 @@ export class MapReduceClient {
       describeClusterParams,
     );
     console.log('EMR Cluster is ready');
-  }
-
-  public mapperParallelism(): number {
-    return NUMBER_OF_REDUCERS;
   }
 }

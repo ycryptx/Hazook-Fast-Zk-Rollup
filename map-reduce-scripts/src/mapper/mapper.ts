@@ -7,18 +7,12 @@ import {
   SerializedTransaction,
 } from '@ycryptx/rollup';
 
-const INPUT_SPLIT = process.env.mapreduce_map_input_start;
-const NUMBER_OF_REDUCERS = 4;
-
 export const mapper = async (): Promise<void> => {
   await Rollup.compile();
 
-  let currentReducer = 0;
-  // let inputSplitCounter = 0;
-
-  const deriveKey = (): string => {
-    const key = `${currentReducer},${INPUT_SPLIT}`;
-    currentReducer = (currentReducer + 1) % NUMBER_OF_REDUCERS;
+  const deriveKey = (lineNumber: number, parallelism: number): string => {
+    const reducerId = lineNumber - (lineNumber % parallelism);
+    const key = `${reducerId},${lineNumber}`;
     return key;
   };
 
@@ -27,12 +21,15 @@ export const mapper = async (): Promise<void> => {
   });
 
   for await (const line of rl) {
-    const [, value] = line.split('\t'); // mapper input is in k:v form of offset \t line due to NLineInputFormat
-    if (!value) {
+    if (!line) {
       continue;
     }
 
-    const jsonSerialized: JSONSerializedTransaction = JSON.parse(value);
+    const [lineNumber, parallelism, data] = line.split('\t');
+
+    const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
+
+    const jsonSerialized: JSONSerializedTransaction = JSON.parse(data);
 
     const serialized = new SerializedTransaction({
       initialRoot: Field(jsonSerialized.initialRoot),
@@ -60,10 +57,9 @@ export const mapper = async (): Promise<void> => {
       serialized.merkleMapWitness,
     );
     const proofString = JSON.stringify(proof.toJSON());
-    const mapKey = deriveKey();
     process.stdout.write(`${mapKey},${proofString}\n`);
     console.error(
-      `Mapper: input=${serialized.newValue.toString()} split=${INPUT_SPLIT}, key=${mapKey}`,
+      `Mapper: input=${serialized.newValue.toString()} key=${mapKey}`,
     );
   }
 };

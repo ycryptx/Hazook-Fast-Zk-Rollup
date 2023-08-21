@@ -96,7 +96,6 @@
             GRPC_SERVER_PORT = "8080";
             REGION = "eu-central-1";
             BUCKET_PREFIX = "mina-fast-zk-rollup";
-            NUMBER_OF_REDUCERS = "4"
           };
         };
       };
