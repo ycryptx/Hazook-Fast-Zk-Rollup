@@ -170,8 +170,8 @@ export class MapReduceClient {
           Properties: {
             'mapreduce.map.cpu.vcores': '1',
             'mapreduce.reduce.cpu.vcores': '1',
-            'mapreduce.map.memory.mb': '3072',
-            'mapreduce.reduce.memory.mb': '3072',
+            'mapreduce.map.memory.mb': '5120',
+            'mapreduce.reduce.memory.mb': '5120',
             'mapreduce.task.timeout': '0',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
