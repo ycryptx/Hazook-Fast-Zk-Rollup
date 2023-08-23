@@ -22,7 +22,7 @@ const onClosed = async (
 };
 
 export const reducer = async (): Promise<void> => {
-  await Rollup.compile();
+  let compiled = false;
 
   const accumulator = new Accumulator();
   const rl = createInterface({
@@ -32,6 +32,10 @@ export const reducer = async (): Promise<void> => {
 
   for await (const line of rl) {
     const [_partitionKey, sortingKey, proofString] = line.split('\t');
+    if (!compiled) {
+      await Rollup.compile();
+      compiled = true;
+    }
     if (!partitionKey) {
       partitionKey = _partitionKey;
     }

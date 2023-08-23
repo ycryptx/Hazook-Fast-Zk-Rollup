@@ -37,7 +37,7 @@ const onClosed = async (partitionKey, accumulatedProof) => {
     return;
 };
 const reducer = async () => {
-    await rollup_1.Rollup.compile();
+    let compiled = false;
     const accumulator = new rollup_1.Accumulator();
     const rl = (0, readline_1.createInterface)({
         input: process.stdin,
@@ -45,6 +45,10 @@ const reducer = async () => {
     let partitionKey;
     for await (const line of rl) {
         const [_partitionKey, sortingKey, proofString] = line.split('\t');
+        if (!compiled) {
+            await rollup_1.Rollup.compile();
+            compiled = true;
+        }
         if (!partitionKey) {
             partitionKey = _partitionKey;
         }

@@ -28,7 +28,7 @@ const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(332);
 const mapper = async () => {
-    await rollup_1.Rollup.compile();
+    let compiled = false;
     const deriveKey = (lineNumber, parallelism) => {
         const reducerId = lineNumber - (lineNumber % parallelism);
         const key = `${reducerId}\t${lineNumber}`;
@@ -42,6 +42,10 @@ const mapper = async () => {
             continue;
         }
         const [lineNumber, parallelism, data] = line.split('\t');
+        if (!compiled) {
+            await rollup_1.Rollup.compile();
+            compiled = true;
+        }
         const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
         const jsonSerialized = JSON.parse(data);
         const serialized = new rollup_1.SerializedTransaction({

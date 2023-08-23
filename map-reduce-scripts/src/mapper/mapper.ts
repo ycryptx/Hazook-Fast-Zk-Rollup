@@ -8,7 +8,7 @@ import {
 } from '@ycryptx/rollup';
 
 export const mapper = async (): Promise<void> => {
-  await Rollup.compile();
+  let compiled = false;
 
   const deriveKey = (lineNumber: number, parallelism: number): string => {
     const reducerId = lineNumber - (lineNumber % parallelism);
@@ -26,6 +26,11 @@ export const mapper = async (): Promise<void> => {
     }
 
     const [lineNumber, parallelism, data] = line.split('\t');
+
+    if (!compiled) {
+      await Rollup.compile();
+      compiled = true;
+    }
 
     const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
 
