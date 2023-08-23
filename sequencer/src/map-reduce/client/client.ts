@@ -200,10 +200,10 @@ export class MapReduceClient {
           },
           {
             InstanceFleetType: 'CORE',
-            TargetSpotCapacity: 2, // Number of core instances
+            TargetSpotCapacity: 1, // Number of core instances
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.2xlarge', // Core instance type
+                InstanceType: 'm5.4xlarge', // Core instance type
                 BidPrice: '0.5',
               },
             ],
