@@ -42,11 +42,11 @@ const mapper = async () => {
             continue;
         }
         const [lineNumber, parallelism, data] = line.split('\t');
+        const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
         if (!compiled) {
             await rollup_1.Rollup.compile();
             compiled = true;
         }
-        const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
         const jsonSerialized = JSON.parse(data);
         const serialized = new rollup_1.SerializedTransaction({
             initialRoot: (0, snarkyjs_1.Field)(jsonSerialized.initialRoot),

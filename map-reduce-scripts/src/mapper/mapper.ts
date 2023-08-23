@@ -27,12 +27,12 @@ export const mapper = async (): Promise<void> => {
 
     const [lineNumber, parallelism, data] = line.split('\t');
 
+    const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
+
     if (!compiled) {
       await Rollup.compile();
       compiled = true;
     }
-
-    const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
 
     const jsonSerialized: JSONSerializedTransaction = JSON.parse(data);
 

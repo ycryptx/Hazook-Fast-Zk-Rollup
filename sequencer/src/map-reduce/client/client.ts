@@ -55,11 +55,6 @@ export class MapReduceClient {
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
         -D mapreduce.map.memory.mb=3072 \
         -D mapreduce.reduce.memory.mb=3072 \
-        -D stream.num.map.output.key.fields=2 \
-        -D mapreduce.partition.keypartitioner.options=-k1,1 \
-        -D mapreduce.partition.keycomparator.options=-k2,2n \
-        -D mapreduce.job.output.key.comparator.class=org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator \
-        -partitioner org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
@@ -104,8 +99,6 @@ export class MapReduceClient {
               'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
-              '-partitioner',
-              'org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner',
               '-input',
               `s3://${inputFile}`,
               '-output',
@@ -176,13 +169,6 @@ export class MapReduceClient {
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
-            'stream.num.map.output.key.fields': '2',
-            'mapred.text.key.partitioner.options': '-k1,1',
-            'mapred.text.key.comparator.options': '-k2,2n',
-            'mapreduce.job.output.key.comparator.class':
-              'org.apache.hadoop.mapred.lib.KeyFieldBasedComparator',
-            'map.output.key.field.separator': '\t',
-            'stream.map.output.field.separator': '\t',
           },
         },
       ],

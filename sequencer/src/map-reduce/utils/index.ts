@@ -19,8 +19,7 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
 export const preProcessInputFile = async (
   inputFile: string,
 ): Promise<string> => {
-  const totalLines = await countLinesInFile(inputFile);
-  const parallelism = totalLines / 4; // given enough cluster cores a single reducer will not process more than 4 proofs
+  const sequentialism = 4; // each parallel process should not compute more than 4 proofs
   const preprocessedFile = inputFile.replace('data', 'preprocessed');
   const rl = createInterface({
     input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
@@ -41,7 +40,7 @@ export const preProcessInputFile = async (
     const tx = txPreProcessor.processTx(parseInt(line));
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${lineNumber}\t${parallelism}\t${JSON.stringify(tx.toJSON())}\n`,
+      `${lineNumber}\t${sequentialism}\t${JSON.stringify(tx.toJSON())}\n`,
     );
     lineNumber += 1;
   }

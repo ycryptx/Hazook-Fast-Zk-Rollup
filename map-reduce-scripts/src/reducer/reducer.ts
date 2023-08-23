@@ -30,6 +30,9 @@ export const reducer = async (): Promise<void> => {
   });
   let partitionKey: string;
 
+  const unorderedIntermediateProofs: { order: number; proof: RollupProof }[] =
+    [];
+
   for await (const line of rl) {
     const [_partitionKey, sortingKey, proofString] = line.split('\t');
     if (!compiled) {
@@ -43,8 +46,20 @@ export const reducer = async (): Promise<void> => {
       `Reducer: partitionKey=${_partitionKey}, sortingKey=${sortingKey}`,
     );
     const intermediateProof = RollupProof.fromJSON(JSON.parse(proofString));
-    await accumulator.addProof(intermediateProof);
+    unorderedIntermediateProofs.push({
+      proof: intermediateProof,
+      order: parseInt(sortingKey),
+    });
   }
+
+  const orderedIntermediateProofs = unorderedIntermediateProofs
+    .sort((entry1, entry2) => entry1.order - entry2.order)
+    .map((entry) => entry.proof);
+
+  for await (const proof of orderedIntermediateProofs) {
+    await accumulator.addProof(proof);
+  }
+
   if (accumulator.accumulatedProof) {
     onClosed(parseInt(partitionKey), accumulator.accumulatedProof);
   }
