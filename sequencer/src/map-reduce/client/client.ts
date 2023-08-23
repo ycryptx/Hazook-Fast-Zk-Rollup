@@ -177,10 +177,12 @@ export class MapReduceClient {
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
             'stream.num.map.output.key.fields': '2',
-            'mapreduce.partition.keypartitioner.options': '-k1,1',
-            'mapreduce.partition.keycomparator.options': '-k2,2n',
+            'mapred.text.key.partitioner.options': '-k1,1',
+            'mapred.text.key.comparator.options': '-k2,2n',
             'mapreduce.job.output.key.comparator.class':
-              'org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator',
+              'org.apache.hadoop.mapred.lib.KeyFieldBasedComparator',
+            'map.output.key.field.separator': '\t',
+            'stream.map.output.field.separator': '\t',
           },
         },
       ],
