@@ -10,7 +10,7 @@ sudo ln -s "$(which npm)" /usr/bin/npm
 sudo ln -sf "$(npm root --quiet -g)" "$(dirname $(npm root --quiet -g))/node"
 
 export NODE_PATH=$(npm root --quiet -g)
-export NODE_OPTIONS="--max-old-space-size=2048"
+# export NODE_OPTIONS="--max-old-space-size=2048"
 
 
 ls $NODE_PATH
