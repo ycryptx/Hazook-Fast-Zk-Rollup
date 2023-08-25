@@ -5,7 +5,9 @@ import {
   RollupState,
   JSONSerializedTransaction,
   SerializedTransaction,
+  RollupProof,
 } from '@ycryptx/rollup';
+import { logger } from '../utils';
 
 export const mapper = async (): Promise<void> => {
   let compiled = false;
@@ -27,10 +29,19 @@ export const mapper = async (): Promise<void> => {
 
     const [lineNumber, parallelism, data] = line.split('\t');
 
+    logger('mapper', `got line ${lineNumber}`);
+
     const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
 
     if (!compiled) {
-      await Rollup.compile();
+      logger('mapper', `compiling zkapp`);
+      try {
+        await Rollup.compile();
+      } catch (err) {
+        logger('mapper', `failed to compile zkapp ${err}`);
+        throw err;
+      }
+      logger('mapper', `finished compiling`);
       compiled = true;
     }
 
@@ -51,20 +62,24 @@ export const mapper = async (): Promise<void> => {
       initialRoot: serialized.initialRoot,
       latestRoot: serialized.latestRoot,
     });
-
-    const proof = await Rollup.oneStep(
-      state,
-      serialized.initialRoot,
-      serialized.latestRoot,
-      serialized.key,
-      serialized.currentValue,
-      serialized.newValue,
-      serialized.merkleMapWitness,
-    );
+    let proof: RollupProof;
+    logger('mapper', `proving ${lineNumber}`);
+    try {
+      proof = await Rollup.oneStep(
+        state,
+        serialized.initialRoot,
+        serialized.latestRoot,
+        serialized.key,
+        serialized.currentValue,
+        serialized.newValue,
+        serialized.merkleMapWitness,
+      );
+    } catch (err) {
+      logger('mapper', `failed to prove ${lineNumber} ${err}`);
+      throw err;
+    }
+    logger('mapper', `proof ${lineNumber} finished`);
     const proofString = JSON.stringify(proof.toJSON());
     process.stdout.write(`${mapKey}\t${proofString}\n`);
-    console.error(
-      `Mapper: input=${serialized.newValue.toString()} key=${mapKey}`,
-    );
   }
 };

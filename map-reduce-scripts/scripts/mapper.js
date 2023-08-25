@@ -27,6 +27,7 @@ exports.mapper = void 0;
 const snarkyjs_1 = __webpack_require__(476);
 const readline_1 = __webpack_require__(521);
 const rollup_1 = __webpack_require__(332);
+const utils_1 = __webpack_require__(935);
 const mapper = async () => {
     let compiled = false;
     const deriveKey = (lineNumber, parallelism) => {
@@ -42,9 +43,18 @@ const mapper = async () => {
             continue;
         }
         const [lineNumber, parallelism, data] = line.split('\t');
+        (0, utils_1.logger)('mapper', `got line ${lineNumber}`);
         const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
         if (!compiled) {
-            await rollup_1.Rollup.compile();
+            (0, utils_1.logger)('mapper', `compiling zkapp`);
+            try {
+                await rollup_1.Rollup.compile();
+            }
+            catch (err) {
+                (0, utils_1.logger)('mapper', `failed to compile zkapp ${err}`);
+                throw err;
+            }
+            (0, utils_1.logger)('mapper', `finished compiling`);
             compiled = true;
         }
         const jsonSerialized = JSON.parse(data);
@@ -60,14 +70,36 @@ const mapper = async () => {
             initialRoot: serialized.initialRoot,
             latestRoot: serialized.latestRoot,
         });
-        const proof = await rollup_1.Rollup.oneStep(state, serialized.initialRoot, serialized.latestRoot, serialized.key, serialized.currentValue, serialized.newValue, serialized.merkleMapWitness);
+        let proof;
+        (0, utils_1.logger)('mapper', `proving ${lineNumber}`);
+        try {
+            proof = await rollup_1.Rollup.oneStep(state, serialized.initialRoot, serialized.latestRoot, serialized.key, serialized.currentValue, serialized.newValue, serialized.merkleMapWitness);
+        }
+        catch (err) {
+            (0, utils_1.logger)('mapper', `failed to prove ${lineNumber} ${err}`);
+            throw err;
+        }
+        (0, utils_1.logger)('mapper', `proof ${lineNumber} finished`);
         const proofString = JSON.stringify(proof.toJSON());
         process.stdout.write(`${mapKey}\t${proofString}\n`);
-        console.error(`Mapper: input=${serialized.newValue.toString()} key=${mapKey}`);
     }
 };
 exports.mapper = mapper;
 //# sourceMappingURL=mapper.js.map
+
+/***/ }),
+
+/***/ 935:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.logger = void 0;
+const logger = (instance, msg) => {
+    console.error(`${new Date().toISOString()} ${instance}: ${msg}`);
+};
+exports.logger = logger;
+//# sourceMappingURL=index.js.map
 
 /***/ }),
 

@@ -1,24 +1,10 @@
 import { createInterface } from 'readline';
 import { Rollup, RollupProof, Accumulator } from '@ycryptx/rollup';
+import { logger } from '../utils';
 
 type OrderedAccumulatedProof = {
   order: number;
   proof: RollupProof;
-};
-
-const onClosed = async (
-  partitionKey: number,
-  accumulatedProof: RollupProof,
-): Promise<void> => {
-  let accumulatedProofString = '';
-  const orderedProof: OrderedAccumulatedProof = {
-    order: partitionKey,
-    proof: accumulatedProof,
-  };
-  accumulatedProofString = JSON.stringify(orderedProof);
-
-  process.stdout.write(accumulatedProofString);
-  return;
 };
 
 export const reducer = async (): Promise<void> => {
@@ -30,38 +16,63 @@ export const reducer = async (): Promise<void> => {
   });
   let partitionKey: string;
 
-  const unorderedIntermediateProofs: { order: number; proof: RollupProof }[] =
-    [];
+  const intermediateProofs: {
+    [partition: string]: OrderedAccumulatedProof[];
+  } = {};
 
   for await (const line of rl) {
-    const [_partitionKey, sortingKey, proofString] = line.split('\t');
+    const [_partitionKey, lineNumber, proofString] = line.split('\t');
+    logger('reducer', `got line ${lineNumber}, partition ${_partitionKey}`);
+
+    if (!intermediateProofs[_partitionKey]) {
+      intermediateProofs[_partitionKey] = [];
+    }
+
     if (!compiled) {
-      await Rollup.compile();
+      logger('reducer', `compiling zkapp`);
+      try {
+        await Rollup.compile();
+      } catch (err) {
+        logger('reducer', `failed compiling zkapp`);
+        throw err;
+      }
+      logger('reducer', `finished compiling zkapp`);
       compiled = true;
     }
     if (!partitionKey) {
       partitionKey = _partitionKey;
     }
-    console.error(
-      `Reducer: partitionKey=${_partitionKey}, sortingKey=${sortingKey}`,
-    );
     const intermediateProof = RollupProof.fromJSON(JSON.parse(proofString));
-    unorderedIntermediateProofs.push({
+    intermediateProofs[_partitionKey].push({
       proof: intermediateProof,
-      order: parseInt(sortingKey),
+      order: parseInt(lineNumber),
     });
   }
 
-  const orderedIntermediateProofs = unorderedIntermediateProofs
-    .sort((entry1, entry2) => entry1.order - entry2.order)
-    .map((entry) => entry.proof);
+  for (const partition of Object.keys(intermediateProofs)) {
+    const orderedIntermediateProofsPerPartition = intermediateProofs[partition]
+      .sort((entry1, entry2) => entry1.order - entry2.order)
+      .map((entry) => entry.proof);
 
-  for await (const proof of orderedIntermediateProofs) {
-    await accumulator.addProof(proof);
+    for (const proof of orderedIntermediateProofsPerPartition) {
+      logger('reducer', `proving a proof in partition ${partition}`);
+      try {
+        await accumulator.addProof(proof);
+      } catch (err) {
+        logger('reducer', `failed proving a proof in partition ${partition}`);
+        throw err;
+      }
+      logger('reducer', `proof finished`);
+    }
+    intermediateProofs[partition] = [
+      { order: parseInt(partition), proof: accumulator.accumulatedProof },
+    ];
   }
 
-  if (accumulator.accumulatedProof) {
-    onClosed(parseInt(partitionKey), accumulator.accumulatedProof);
+  let result = '';
+  for (const partition of Object.keys(intermediateProofs)) {
+    result += `${JSON.stringify(intermediateProofs[partition][0])}\n`;
   }
+  process.stdout.write(result);
   return;
 };
