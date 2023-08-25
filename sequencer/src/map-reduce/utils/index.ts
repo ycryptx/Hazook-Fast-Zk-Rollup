@@ -16,10 +16,10 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
   }
 };
 
-export const preProcessInputFile = async (
+export const preProcessRawTransactions = async (
   inputFile: string,
 ): Promise<string> => {
-  const sequentialism = 4; // each parallel process should not compute more than 4 proofs
+  const sequentialism = 4; // each parallel process should not compute more than 4 proofs if there are enough cores
   const preprocessedFile = inputFile.replace('data', 'preprocessed');
   const rl = createInterface({
     input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
@@ -40,7 +40,9 @@ export const preProcessInputFile = async (
     const tx = txPreProcessor.processTx(parseInt(line));
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${lineNumber}\t${sequentialism}\t${JSON.stringify(tx.toJSON())}\n`,
+      `${lineNumber}\t${sequentialism}\t${'0'}\t${JSON.stringify(
+        tx.toJSON(),
+      )}\n`,
     );
     lineNumber += 1;
   }
