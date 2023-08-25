@@ -1,3 +1,5 @@
+import * as path from 'path';
+import * as fs from 'fs';
 import {
   EMRClient,
   RunJobFlowCommand,
@@ -11,7 +13,8 @@ import {
 import * as randString from 'randomstring';
 import { Mode } from '../types';
 import { Uploader } from '../uploader';
-import { runShellCommand } from '../utils';
+import { runShellCommand, preProcessRawTransactions } from '../utils';
+import { RollupProof } from '@ycryptx/rollup';
 
 const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
 
@@ -39,13 +42,47 @@ export class MapReduceClient {
    * @param inputFile the location of the input file that Map-Reduce should process
    * @returns the result of the MapReduce
    */
-  async process(inputFile: string): Promise<string> {
-    return this.mode == Mode.LOCAL
-      ? this.processLocal(inputFile)
-      : this.processEmr(inputFile);
+  async process(inputFile: string): Promise<RollupProof> {
+    const sequentialism = 4; // each parallel process should not compute more than 4 proofs if there are enough cores
+    const preProcessedTransactions = await preProcessRawTransactions(inputFile);
+    const absPathInputFile = path.join(
+      __dirname,
+      '../',
+      preProcessedTransactions,
+    );
+    let proofs: RollupProof[] = [];
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // upload data to Hadoop
+      const inputLocation = await this.uploader.upload(absPathInputFile);
+
+      proofs = await (this.mode == Mode.LOCAL
+        ? this.processLocal(inputLocation)
+        : this.processEmr(inputLocation));
+
+      console.log(`map reduce down to ${proofs.length} proofs`);
+
+      if (proofs.length <= 1) {
+        break;
+      }
+
+      fs.unlinkSync(absPathInputFile);
+
+      for (let i = 0; i < proofs.length; i++) {
+        fs.appendFileSync(
+          absPathInputFile,
+          `${i}\t${sequentialism}\t${'1'}\t${JSON.stringify(
+            proofs[i].toJSON(),
+          )}\n`,
+        );
+      }
+    }
+    console.log(`map reduce finished`);
+    return proofs[0];
   }
 
-  private async processLocal(inputFile: string): Promise<string> {
+  private async processLocal(inputFile: string): Promise<RollupProof[]> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -62,10 +99,10 @@ export class MapReduceClient {
       true,
     );
 
-    return this.uploader.getAccumulatedLocalHadoopOutput(container, outputDir);
+    return this.uploader.getLocalHadoopOutput(container, outputDir);
   }
 
-  private async processEmr(inputFile: string): Promise<string> {
+  private async processEmr(inputFile: string): Promise<RollupProof[]> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({
@@ -125,11 +162,9 @@ export class MapReduceClient {
         StepId: data.StepIds[0],
       },
     );
-    const result = await this.uploader.getAccumulatedEMROutput(outputDir);
+    const result = await this.uploader.getEMROutput(outputDir);
 
     const end = Date.now();
-    console.log(`Demo finished`);
-    console.log(`Result: ${result}`);
     console.log(`Running time: ${end - start} ms`);
 
     return result;

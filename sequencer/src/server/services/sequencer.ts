@@ -1,5 +1,3 @@
-import * as path from 'path';
-
 import {
   Case,
   DemoRequest,
@@ -9,7 +7,6 @@ import {
   DeepPartial,
 } from '../compiled/services/sequencer/v1/sequencer_service';
 import { Mode, MapReduceClient } from '../../map-reduce';
-import { preProcessInputFile } from '../../map-reduce/utils';
 
 const MODE = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
 const REGION = process.env.REGION;
@@ -44,14 +41,10 @@ class Sequencer implements SequencerServiceImplementation {
       default:
     }
 
-    const preProcessedInputFile = await preProcessInputFile(inputFile);
-
-    const absPathInputFile = path.join(__dirname, '../', preProcessedInputFile);
-    // uplaod data to Hadoop
-    const inputLocation = await mapReduce.upload(absPathInputFile);
-
     // start Hadoop map-reduce operation
-    response.result = await mapReduce.process(inputLocation);
+    const proof = await mapReduce.process(inputFile);
+
+    response.result = JSON.stringify(proof.toJSON());
 
     return response;
   };

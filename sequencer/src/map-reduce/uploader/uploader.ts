@@ -28,20 +28,10 @@ export class Uploader {
     }
   }
 
-  public async getAccumulatedEMROutput(emrOutputPath: string): Promise<string> {
-    const intermediateProofs = (
-      await this.getIntermediateEMROutputs(emrOutputPath)
-    ).map((proofString) => JSON.parse(proofString));
-
-    const accumulatedProof = await this.accumulateProofs(intermediateProofs);
-
-    return JSON.stringify(accumulatedProof.toJSON());
-  }
-
-  public async getAccumulatedLocalHadoopOutput(
+  public async getLocalHadoopOutput(
     container: string,
     outputDir: string,
-  ): Promise<string> {
+  ): Promise<RollupProof[]> {
     // get intermediate results
     let hadoopResults: string;
 
@@ -62,27 +52,13 @@ export class Uploader {
     const serializedHadoopResults = splitHadoopResults.map((proofString) =>
       JSON.parse(proofString),
     );
-    const sortedProofs = serializedHadoopResults
+    const sortedProofs: RollupProof[] = serializedHadoopResults
       .sort((res1, res2) => res1.order - res2.order)
       .map((res) => res.proof);
-    const accumulatedProof = await this.accumulateProofs(sortedProofs);
-
-    return JSON.stringify(accumulatedProof.toJSON());
+    return sortedProofs;
   }
 
-  private async accumulateProofs(
-    intermediateProofs: RollupProof[],
-  ): Promise<RollupProof> {
-    const accumulator = new Accumulator();
-    for (const proof of intermediateProofs) {
-      await accumulator.addProof(proof);
-    }
-    return accumulator.accumulatedProof;
-  }
-
-  private async getIntermediateEMROutputs(
-    emrOutputPath: string,
-  ): Promise<string[]> {
+  public async getEMROutput(emrOutputPath: string): Promise<RollupProof[]> {
     const results: Promise<string>[] = [];
 
     const outputParts = await this.listObjectsWithPrefix(
@@ -100,7 +76,14 @@ export class Uploader {
     for (const response of responses) {
       results.push(response.Body.transformToString());
     }
-    return Promise.all(results);
+    const serializedProofs = (await Promise.all(results))
+      .filter((proof) => proof != '')
+      .map((proof) => JSON.parse(proof));
+
+    const sortedProofs: RollupProof[] = serializedProofs
+      .sort((res1, res2) => parseInt(res1.order) - parseInt(res2.order))
+      .map((res) => res.proof);
+    return sortedProofs;
   }
 
   // Function to list objects with a specific prefix

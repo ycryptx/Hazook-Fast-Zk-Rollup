@@ -12,8 +12,8 @@ import { logger } from '../utils';
 export const mapper = async (): Promise<void> => {
   let compiled = false;
 
-  const deriveKey = (lineNumber: number, parallelism: number): string => {
-    const reducerId = lineNumber - (lineNumber % parallelism);
+  const deriveKey = (lineNumber: number, sequentialism: number): string => {
+    const reducerId = lineNumber - (lineNumber % sequentialism);
     const key = `${reducerId}\t${lineNumber}`;
     return key;
   };
@@ -27,11 +27,16 @@ export const mapper = async (): Promise<void> => {
       continue;
     }
 
-    const [lineNumber, parallelism, data] = line.split('\t');
+    const [lineNumber, sequentialism, isIntermediate, data] = line.split('\t');
 
     logger('mapper', `got line ${lineNumber}`);
 
-    const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
+    const mapKey = deriveKey(parseInt(lineNumber), parseInt(sequentialism));
+
+    if (isIntermediate == '1') {
+      process.stdout.write(`${mapKey}\t${data}\n`);
+      continue;
+    }
 
     if (!compiled) {
       logger('mapper', `compiling zkapp`);

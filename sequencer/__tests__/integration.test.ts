@@ -24,12 +24,7 @@ describe('integration tests', () => {
       const inputLocation = await mapReduce.upload(dataFilePath);
       const mapReduceResult = await mapReduce.process(inputLocation);
 
-      expect(
-        mapReduceResult.split('\n').reduce((val: string, acc: string) => {
-          acc = `${parseInt(acc) + parseInt(val)}`;
-          return acc;
-        }, '0'),
-      ).toEqual(`${1 + 2 + 3 + 4 + 5 + 6 + 7}`);
+      expect(mapReduceResult).toEqual(`${1 + 2 + 3 + 4 + 5 + 6 + 7}`);
     },
     1000 * 60 * 5,
   );
