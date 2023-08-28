@@ -365,10 +365,14 @@ resource "aws_emr_cluster" "accumulator" {
   applications  = ["Hadoop"]
   service_role  = "EMR_DefaultRole"
   ec2_attributes {
-    subnet_id                         = aws_subnet.private_1.id
+    # TODO: WARNING: remove the machines from the public_1 subnet
+    # before deploying this system to production!!!!!!!
+    # We opened the floodgates to simplify the dev workflow.
+    subnet_id                         = aws_subnet.public_1.id
     additional_master_security_groups = aws_security_group.emr_master.id
     additional_slave_security_groups  = aws_security_group.emr_core.id
     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
+    key_name = aws_key_pair.ycryptx.key_name
   }
 
   log_uri = "s3://${aws_s3_bucket.emr_data.id}"
@@ -477,6 +481,11 @@ resource "aws_eip" "sequencer-eip" {
   tags = {
     project = "${var.project}"
   }
+}
+
+resource "aws_key_pair" "ycryptx" {
+  key_name = "ycryptx"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz7QlDRx7Vvra3XCfB4bWwFSxEgw81DHgeNrFTR5dxT/J29MfZhW+rjJXR4mVAvUGEBlNsGJ6EwBt65FqWxuWTGARoW2jBVMxqwqxldYLKHWcWTv8IdaYAQniKwfOX/3NaaQEw93HwHbb8aYjbBudR/UtwOgT0vDpuxUzPwIDRxea3Za64qV0H7s6PnfbC5DcC9fOX72fiGXuwMaZAUN8dIgI9mZcEn3yaWfwqYQ+Qcx6pDEWG73YLXJfoZ7UtSp+GF6lgOcTc7pw+NIoUcU/Pq+I0d7ECIEaRXv97U2R8lbgBRkR7NIBjxqSKHb3m5wfDvLQGrrn2Mg7zmGa8buyfeNaBfolEfa+c8R2fS8smvd7El3K/ogMeRJ3j5actRIP74UKqrgQd6nTJDkxD4F09bDHcke+PLlLkyURnatcRGH3J56sVTXRM5mRGuoFufBz8s6K+jS2Fmxirf97fJ61gq/M7w4LEDDX2gncrNeX+QmqGeWXV5wBFkvS2lxYGl88="
 }
 
 resource "aws_instance" "sequencer" {
