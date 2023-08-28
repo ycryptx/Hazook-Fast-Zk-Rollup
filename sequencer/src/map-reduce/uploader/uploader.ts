@@ -7,7 +7,7 @@ import {
   ListObjectsV2Command,
   GetObjectCommandOutput,
 } from '@aws-sdk/client-s3';
-import { RollupProof, Accumulator } from '@ycryptx/rollup';
+import { RollupProof } from '@ycryptx/rollup';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';
@@ -54,7 +54,7 @@ export class Uploader {
     );
     const sortedProofs: RollupProof[] = serializedHadoopResults
       .sort((res1, res2) => res1.order - res2.order)
-      .map((res) => res.proof);
+      .map((res) => RollupProof.fromJSON(res.proof));
     return sortedProofs;
   }
 
@@ -82,7 +82,7 @@ export class Uploader {
 
     const sortedProofs: RollupProof[] = serializedProofs
       .sort((res1, res2) => parseInt(res1.order) - parseInt(res2.order))
-      .map((res) => res.proof);
+      .map((res) => RollupProof.fromJSON(res.proof));
     return sortedProofs;
   }
 
