@@ -286,9 +286,9 @@ resource "aws_security_group" "sequencer" {
 resource "aws_security_group" "emr_dev" {
   vpc_id = "${aws_vpc.main.id}"
   ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
     cidr_blocks = [ aws_subnet.private_1.cidr_block ]
   }
   egress {
@@ -462,6 +462,8 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
       "elasticmapreduce:List*",
       "elasticmapreduce:RunJobFlow",
       "elasticmapreduce:TerminateJobFlows",
+      // TODO: here to help ycryptx debug stuff, toremove
+      "ec2:Describe*"
     ]
     resources = ["*"]
   }
@@ -507,6 +509,14 @@ resource "aws_key_pair" "ycryptx" {
 resource "aws_key_pair" "sequencer" {
   key_name = "sequencer"
   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6tWZZkHYJJtD7G+hiOc8ICbNrDngrLtE/jst67wERX"
+}
+
+resource "aws_network_interface" "priv-sequencer" {
+  subnet_id = aws_subnet.private_1.id
+  attachment {
+    instance = aws_instance.sequencer.id
+    device_index = 2
+  }
 }
 
 resource "aws_instance" "sequencer" {
