@@ -141,7 +141,9 @@ export class MapReduceClient {
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
               '-D',
-              `mapreduce.input.lineinputformat.linespermap=${lineNumber / 4}`, // this controls mapper sequentialism (4 is chosen quite arbitrarily)
+              `mapreduce.input.lineinputformat.linespermap=${
+                Math.round(lineNumber / 4) || 1
+              }`, // this controls mapper sequentialism (4 is chosen quite arbitrarily)
               '-input',
               `s3://${inputFile}`,
               '-output',
