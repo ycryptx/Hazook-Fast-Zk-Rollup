@@ -210,6 +210,8 @@ export class MapReduceClient {
             'mapreduce.reduce.memory.mb': '5120',
             'mapreduce.task.timeout': '0',
             'mapreduce.task.stuck.timeout-ms': '0',
+            'mapreduce.map.speculative': 'false',
+            'mapreduce.reduce.speculative': 'false',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
@@ -230,10 +232,10 @@ export class MapReduceClient {
           },
           {
             InstanceFleetType: 'CORE',
-            TargetSpotCapacity: 1, // Number of core instances
+            TargetSpotCapacity: 3, // Number of core instances
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.4xlarge', // Core instance type
+                InstanceType: 'm5.2xlarge', // Core instance type
                 BidPrice: '0.5',
               },
             ],

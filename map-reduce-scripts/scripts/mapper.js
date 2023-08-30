@@ -87,6 +87,7 @@ const mapper = async () => {
         (0, utils_1.logger)('mapper', `proof ${lineNumber} finished`);
         const proofString = JSON.stringify(proof.toJSON());
         process.stdout.write(`${mapKey}\t${proofString}\n`);
+        (0, utils_1.logger)('mapper', `done`);
     }
 };
 exports.mapper = mapper;
