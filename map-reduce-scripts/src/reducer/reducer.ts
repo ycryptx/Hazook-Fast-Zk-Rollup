@@ -27,8 +27,10 @@ export const reducer = async (): Promise<void> => {
     logger('reducer', `got line ${lineNumber}, partition ${_partitionKey}`);
 
     if (!intermediateProofs[_partitionKey]) {
-      intermediateProofs[_partitionKey].proofs = [];
-      intermediateProofs[_partitionKey].accumulator = new Accumulator();
+      intermediateProofs[_partitionKey] = {
+        proofs: [],
+        accumulator: new Accumulator(),
+      };
     }
 
     if (!compiled) {

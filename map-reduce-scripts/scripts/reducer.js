@@ -38,8 +38,10 @@ const reducer = async () => {
         const [_partitionKey, lineNumber, proofString] = line.split('\t');
         (0, utils_1.logger)('reducer', `got line ${lineNumber}, partition ${_partitionKey}`);
         if (!intermediateProofs[_partitionKey]) {
-            intermediateProofs[_partitionKey].proofs = [];
-            intermediateProofs[_partitionKey].accumulator = new rollup_1.Accumulator();
+            intermediateProofs[_partitionKey] = {
+                proofs: [],
+                accumulator: new rollup_1.Accumulator(),
+            };
         }
         if (!compiled) {
             (0, utils_1.logger)('reducer', `compiling zkapp`);
