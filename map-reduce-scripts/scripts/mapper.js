@@ -30,8 +30,8 @@ const rollup_1 = __webpack_require__(332);
 const utils_1 = __webpack_require__(935);
 const mapper = async () => {
     let compiled = false;
-    const deriveKey = (lineNumber, parallelism) => {
-        const reducerId = lineNumber - (lineNumber % parallelism);
+    const deriveKey = (lineNumber, sequentialism) => {
+        const reducerId = lineNumber - (lineNumber % sequentialism);
         const key = `${reducerId}\t${lineNumber}`;
         return key;
     };
@@ -42,9 +42,14 @@ const mapper = async () => {
         if (!line) {
             continue;
         }
-        const [lineNumber, parallelism, data] = line.split('\t');
+        const [, lineNumber, sequentialism, isIntermediate, data] = // the first \t separated field is a key set by nLineInputFormat
+         line.split('\t');
         (0, utils_1.logger)('mapper', `got line ${lineNumber}`);
-        const mapKey = deriveKey(parseInt(lineNumber), parseInt(parallelism));
+        const mapKey = deriveKey(parseInt(lineNumber), parseInt(sequentialism));
+        if (isIntermediate == '1') {
+            process.stdout.write(`${mapKey}\t${data}\n`);
+            continue;
+        }
         if (!compiled) {
             (0, utils_1.logger)('mapper', `compiling zkapp`);
             try {

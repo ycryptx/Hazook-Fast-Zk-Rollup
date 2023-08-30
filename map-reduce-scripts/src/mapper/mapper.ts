@@ -27,7 +27,8 @@ export const mapper = async (): Promise<void> => {
       continue;
     }
 
-    const [lineNumber, sequentialism, isIntermediate, data] = line.split('\t');
+    const [, lineNumber, sequentialism, isIntermediate, data] = // the first \t separated field is a key set by nLineInputFormat
+      line.split('\t');
 
     logger('mapper', `got line ${lineNumber}`);
 

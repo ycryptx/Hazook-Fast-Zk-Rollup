@@ -44,12 +44,10 @@ export class MapReduceClient {
    */
   async process(inputFile: string): Promise<RollupProof> {
     const sequentialism = 4; // each parallel process should not compute more than 4 proofs if there are enough cores
-    const preProcessedTransactions = await preProcessRawTransactions(inputFile);
-    const absPathInputFile = path.join(
-      __dirname,
-      '../',
-      preProcessedTransactions,
+    const { preprocessedFile, lineNumber } = await preProcessRawTransactions(
+      inputFile,
     );
+    const absPathInputFile = path.join(__dirname, '../', preprocessedFile);
     let proofs: RollupProof[] = [];
 
     // eslint-disable-next-line no-constant-condition
@@ -59,7 +57,10 @@ export class MapReduceClient {
 
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
-        : this.processEmr(inputLocation));
+        : this.processEmr(
+            inputLocation,
+            proofs.length > 0 ? proofs.length : lineNumber,
+          ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -102,7 +103,10 @@ export class MapReduceClient {
     return this.uploader.getLocalHadoopOutput(container, outputDir);
   }
 
-  private async processEmr(inputFile: string): Promise<RollupProof[]> {
+  private async processEmr(
+    inputFile: string,
+    lineNumber: number,
+  ): Promise<RollupProof[]> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({
@@ -136,6 +140,8 @@ export class MapReduceClient {
               'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
+              '-D',
+              `mapreduce.input.lineinputformat.linespermap=${lineNumber / 4}`, // this controls mapper sequentialism (4 is chosen quite arbitrarily)
               '-input',
               `s3://${inputFile}`,
               '-output',
@@ -144,6 +150,8 @@ export class MapReduceClient {
               'mapper.js',
               '-reducer',
               'reducer.js',
+              '-inputformat',
+              'org.apache.hadoop.mapred.lib.NLineInputFormat',
             ],
           },
           ActionOnFailure: 'CONTINUE',
@@ -201,6 +209,7 @@ export class MapReduceClient {
             'mapreduce.map.memory.mb': '5120',
             'mapreduce.reduce.memory.mb': '5120',
             'mapreduce.task.timeout': '0',
+            'mapreduce.task.stuck.timeout-ms': '0',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
