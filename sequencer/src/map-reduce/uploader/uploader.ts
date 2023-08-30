@@ -77,7 +77,7 @@ export class Uploader {
       results.push(response.Body.transformToString());
     }
     const serializedProofs = (await Promise.all(results))
-      .filter((proof) => proof != '')
+      .filter((proof) => proof.trim() != '')
       .map((proof) => JSON.parse(proof));
 
     const sortedProofs: RollupProof[] = serializedProofs
