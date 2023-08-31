@@ -36,3 +36,6 @@ generate-demo-data:
 	for number in {0..16383} ; do \
     	echo $$number >> sequencer/data/run4.txt; \
 	done
+
+run-demo:
+	grpc_cli call 0.0.0.0:8080 Demo "case: 1"
