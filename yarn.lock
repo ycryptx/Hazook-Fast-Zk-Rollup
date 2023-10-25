@@ -4195,6 +4195,18 @@ npmlog@^5.0.1:
     gauge "^3.0.0"
     set-blocking "^2.0.0"
 
+o1js@^0.13.1:
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/o1js/-/o1js-0.13.1.tgz#8575a1a5eb4abeb493f9d60e9f29dd876f9520bc"
+  integrity sha512-7QHHRRLmmyR8e+YmIFcgatS2q1on+SDD9h4NIK8JR/82eim7w8bQyBZqAwfCU2PmaQtqlZhkLoL4PmZRnxDzQQ==
+  dependencies:
+    blakejs "1.2.1"
+    detect-gpu "^5.0.5"
+    isomorphic-fetch "^3.0.0"
+    js-sha256 "^0.9.0"
+    reflect-metadata "^0.1.13"
+    tslib "^2.3.0"
+
 object-assign@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
@@ -4581,18 +4593,6 @@ slash@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/slash/-/slash-3.0.0.tgz#6539be870c165adbd5240220dbe361f1bc4d4634"
   integrity sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==
-
-snarkyjs@^0.11.0:
-  version "0.11.4"
-  resolved "https://registry.yarnpkg.com/snarkyjs/-/snarkyjs-0.11.4.tgz#b8a5f066720d0b596c729f697b621949fc164804"
-  integrity sha512-PVbVus8xoL1XgkFRg/SlfxmC30AziIgr7HCTeBKzIuffa155mxTL+WARZg4XlIG27hG+CAGycSebQhiedoLR0w==
-  dependencies:
-    blakejs "1.2.1"
-    detect-gpu "^5.0.5"
-    isomorphic-fetch "^3.0.0"
-    js-sha256 "^0.9.0"
-    reflect-metadata "^0.1.13"
-    tslib "^2.3.0"
 
 source-map-support@0.5.13:
   version "0.5.13"

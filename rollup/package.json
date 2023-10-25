@@ -1,7 +1,7 @@
 {
   "name": "@ycryptx/rollup",
   "version": "1.0.0",
-  "description": "Rollup logic written in Snarkyjs",
+  "description": "Rollup logic written using o1js",
   "type": "commonjs",
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
@@ -43,7 +43,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "cross-env": "^7.0.3",
-    "snarkyjs": "^0.11.0",
+    "o1js": "^0.13.1",
     "tslib": "~2.5"
   }
 }

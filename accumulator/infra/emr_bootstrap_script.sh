@@ -15,6 +15,6 @@ export NODE_PATH=$(npm root --quiet -g)
 
 ls $NODE_PATH
 
-npm i -g snarkyjs
+npm i -g o1js
 
 ls $NODE_PATH

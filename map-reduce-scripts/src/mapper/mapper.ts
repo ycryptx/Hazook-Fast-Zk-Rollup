@@ -1,4 +1,4 @@
-import { Field, MerkleMapWitness } from 'snarkyjs';
+import { Field, MerkleMapWitness } from 'o1js';
 import { createInterface } from 'readline';
 import {
   Rollup,
