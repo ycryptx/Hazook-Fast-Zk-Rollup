@@ -4,10 +4,10 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 476:
+/***/ 136:
 /***/ ((module) => {
 
-module.exports = require("snarkyjs");
+module.exports = require("o1js");
 
 /***/ }),
 
@@ -116,10 +116,10 @@ exports.logger = logger;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Accumulator = exports.TransactionPreProcessor = exports.SerializedTransaction = exports.RollupProof = exports.Rollup = exports.RollupState = void 0;
-const snarkyjs_1 = __webpack_require__(476);
-class RollupState extends (0, snarkyjs_1.Struct)({
-    initialRoot: snarkyjs_1.Field,
-    latestRoot: snarkyjs_1.Field,
+const o1js_1 = __webpack_require__(136);
+class RollupState extends (0, o1js_1.Struct)({
+    initialRoot: o1js_1.Field,
+    latestRoot: o1js_1.Field,
 }) {
     static createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
         const [witnessRootBefore, witnessKey] = merkleMapWitness.computeRootAndKey(currentValue);
@@ -144,11 +144,11 @@ class RollupState extends (0, snarkyjs_1.Struct)({
     }
 }
 exports.RollupState = RollupState;
-exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
+exports.Rollup = o1js_1.Experimental.ZkProgram({
     publicInput: RollupState,
     methods: {
         oneStep: {
-            privateInputs: [snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.Field, snarkyjs_1.MerkleMapWitness],
+            privateInputs: [o1js_1.Field, o1js_1.Field, o1js_1.Field, o1js_1.Field, o1js_1.Field, o1js_1.MerkleMapWitness],
             method(newState, initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness) {
                 const computedState = RollupState.createOneStep(initialRoot, latestRoot, key, currentValue, newValue, merkleMapWitness);
                 RollupState.assertEquals(newState, computedState);
@@ -156,7 +156,7 @@ exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
             },
         },
         merge: {
-            privateInputs: [snarkyjs_1.SelfProof, snarkyjs_1.SelfProof],
+            privateInputs: [o1js_1.SelfProof, o1js_1.SelfProof],
             method(newState, rollup1proof, rollup2proof) {
                 rollup1proof.verify(); // A -> B
                 rollup2proof.verify(); // B -> C
@@ -167,7 +167,7 @@ exports.Rollup = snarkyjs_1.Experimental.ZkProgram({
         },
     },
 });
-class RollupProof extends snarkyjs_1.Experimental.ZkProgram.Proof(exports.Rollup) {
+class RollupProof extends o1js_1.Experimental.ZkProgram.Proof(exports.Rollup) {
 }
 exports.RollupProof = RollupProof;
 class SerializedTransaction {
@@ -194,14 +194,14 @@ class SerializedTransaction {
 exports.SerializedTransaction = SerializedTransaction;
 class TransactionPreProcessor {
     constructor() {
-        this.merkleMap = new snarkyjs_1.MerkleMap();
-        this.currentValue = (0, snarkyjs_1.Field)(0);
+        this.merkleMap = new o1js_1.MerkleMap();
+        this.currentValue = (0, o1js_1.Field)(0);
     }
     processTx(tx) {
         const initialRoot = this.merkleMap.getRoot();
-        const newValue = (0, snarkyjs_1.Field)(tx);
-        const key = (0, snarkyjs_1.Field)(this.merkleMap.tree.leafCount);
-        const currentValue = (0, snarkyjs_1.Field)(this.currentValue.value);
+        const newValue = (0, o1js_1.Field)(tx);
+        const key = (0, o1js_1.Field)(this.merkleMap.tree.leafCount);
+        const currentValue = (0, o1js_1.Field)(this.currentValue.value);
         this.merkleMap.set(key, newValue);
         this.currentValue = newValue;
         return new SerializedTransaction({

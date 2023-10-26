@@ -56,9 +56,9 @@
     "long": "^5.2.3",
     "nice-grpc": "^2.1.4",
     "nice-grpc-server-reflection": "^2.0.6",
+    "o1js": "^0.13.1",
     "protobufjs": "^7.2.4",
     "randomstring": "^1.3.0",
-    "snarkyjs": "^0.11.0",
     "source-map-support": "^0.5.21",
     "tslib": "~2.5"
   }

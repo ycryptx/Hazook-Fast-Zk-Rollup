@@ -9,9 +9,9 @@
 FROM eclipse-temurin:8-jdk-focal
 RUN apt-get update -y \
     && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
-        sudo \
-        curl \
-        ssh \
+    sudo \
+    curl \
+    ssh \
     && apt-get clean
 RUN useradd -m hduser && echo "hduser:supergroup" | chpasswd && adduser hduser sudo && echo "hduser     ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && cd /usr/bin/ && sudo ln -s python3 python
 COPY ssh_config /etc/ssh/ssh_config
@@ -22,10 +22,10 @@ RUN ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && cat ~/.ssh/id_rsa.pub >> ~/.ssh/
 ENV HADOOP_VERSION=3.3.3
 ENV HADOOP_HOME /home/hduser/hadoop-${HADOOP_VERSION}
 RUN curl -sL --retry 3 \
-  "http://archive.apache.org/dist/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz" \
-  | gunzip \
-  | tar -x -C /home/hduser/ \
- && rm -rf ${HADOOP_HOME}/share/doc
+    "http://archive.apache.org/dist/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz" \
+    | gunzip \
+    | tar -x -C /home/hduser/ \
+    && rm -rf ${HADOOP_HOME}/share/doc
 
 ENV HDFS_NAMENODE_USER hduser
 ENV HDFS_DATANODE_USER hduser
@@ -56,10 +56,10 @@ ENV YARNSTART 0
 
 # Download and install Node.js on the Hadoop cluster
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && \
-sudo apt-get install -y nodejs
+    sudo apt-get install -y nodejs
 
-# Install Snarkyjs as a global npm package
-RUN sudo npm i -g snarkyjs
+# Install o1js as a global npm package
+RUN sudo npm i -g o1js
 
 ENV NODE_PATH /usr/lib/node_modules
 

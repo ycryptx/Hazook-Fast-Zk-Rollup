@@ -6,7 +6,7 @@ import {
   Empty,
   MerkleMapWitness,
   MerkleMap,
-} from 'snarkyjs';
+} from 'o1js';
 
 export class RollupState extends Struct({
   initialRoot: Field,
@@ -117,7 +117,9 @@ export const Rollup = Experimental.ZkProgram({
   },
 });
 
-export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {}
+export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {
+  //
+}
 
 export type Transaction = number;
 
