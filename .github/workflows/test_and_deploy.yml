@@ -69,10 +69,12 @@ jobs:
           arch: amd64
           rootdir: ""
           workdir: ""
+      - name: re-build mapper/reducer scripts
+        run: make build-map-reduce-scripts
       - name: Push EMR Mapper/Reducer/Bootstrap to S3
         run: |
-            aws s3 cp ./map-reduce-scripts/scripts/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
-            aws s3 cp ./map-reduce-scripts/scripts/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
+            aws s3 cp ./sequencer/scripts/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
+            aws s3 cp ./sequencer/scripts/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
             aws s3 cp ./accumulator/infra/emr_bootstrap_script.sh s3://${{ env.DATA_BUCKET_NAME }}/emr_bootstrap_script.sh
         env:
           DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
@@ -87,7 +89,7 @@ jobs:
           password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         env:
           AWS_REGION: "us-east-1"
-      - name: Push to ECR registry
+      - name: Push to sequencer server image to ECR registry
         uses: docker/build-push-action@v2
         with:
           tags: public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest
