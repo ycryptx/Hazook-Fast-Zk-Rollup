@@ -1,13 +1,15 @@
 import { createInterface } from 'readline';
-import { Rollup, RollupProof, Accumulator } from '@ycryptx/rollup';
+import { Rollup, RollupProof, RollupProofBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
 type OrderedAccumulatedProof = {
   order: number;
-  proof: RollupProof;
+  proof: RollupProofBase;
 };
 
-export const reducer = async (): Promise<void> => {
+export const reducer = async <
+  RollupProof extends RollupProofBase,
+>(): Promise<void> => {
   let compiled = false;
 
   const rl = createInterface({
@@ -18,7 +20,7 @@ export const reducer = async (): Promise<void> => {
   const intermediateProofs: {
     [partition: string]: {
       proofs: OrderedAccumulatedProof[];
-      accumulator: Accumulator;
+      accumulated?: RollupProof;
     };
   } = {};
 
@@ -29,7 +31,6 @@ export const reducer = async (): Promise<void> => {
     if (!intermediateProofs[_partitionKey]) {
       intermediateProofs[_partitionKey] = {
         proofs: [],
-        accumulator: new Accumulator(),
       };
     }
 
@@ -47,11 +48,17 @@ export const reducer = async (): Promise<void> => {
     if (!partitionKey) {
       partitionKey = _partitionKey;
     }
-    const intermediateProof = RollupProof.fromJSON(JSON.parse(proofString));
+
+    const intermediateProof = RollupProof.fromJSON(
+      JSON.parse(proofString),
+    ) as unknown as RollupProof;
     intermediateProofs[_partitionKey].proofs.push({
       proof: intermediateProof,
       order: parseInt(lineNumber),
     });
+
+    // TODO: see if moving the proof generation from within the line reading
+    // speeds up the reducer
   }
 
   const accumulatedProofs: OrderedAccumulatedProof[] = [];
@@ -64,9 +71,14 @@ export const reducer = async (): Promise<void> => {
     for (const orderedProof of intermediateProofs[partition].proofs) {
       logger('reducer', `proving a proof in partition ${partition}`);
       try {
-        await intermediateProofs[partition].accumulator.addProof(
-          orderedProof.proof,
-        );
+        if (!intermediateProofs[partition].accumulated) {
+          intermediateProofs[partition].accumulated =
+            orderedProof.proof as RollupProof;
+          continue;
+        }
+        intermediateProofs[partition].accumulated = (await intermediateProofs[
+          partition
+        ].accumulated.merge(orderedProof.proof)) as RollupProof;
       } catch (err) {
         logger('reducer', `failed proving a proof in partition ${partition}`);
         throw err;
@@ -75,7 +87,7 @@ export const reducer = async (): Promise<void> => {
     }
     accumulatedProofs.push({
       order: parseInt(partition),
-      proof: intermediateProofs[partition].accumulator.accumulatedProof,
+      proof: intermediateProofs[partition].accumulated,
     });
   }
 

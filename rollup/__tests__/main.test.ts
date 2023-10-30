@@ -2,14 +2,32 @@
 
 import {
   Rollup,
-  RollupState,
   RollupProof,
+  RollupProofBase,
   TransactionPreProcessor,
-  Accumulator,
-  SerializedTransaction,
+  MyTransaction,
 } from '../src';
 
 const txs = [0, 1, 2, 3, 4, 5, 6, 7];
+
+// TODO: consider using this in mapper script
+class Accumulator<RollupProof extends RollupProofBase> {
+  private _accumulatedProof: RollupProof;
+
+  public async addProof(proof: RollupProof): Promise<void> {
+    if (!this._accumulatedProof) {
+      this._accumulatedProof = proof;
+      return;
+    }
+    this._accumulatedProof = (await this._accumulatedProof.merge(
+      proof,
+    )) as RollupProof;
+  }
+
+  public get accumulatedProof(): RollupProof {
+    return this._accumulatedProof;
+  }
+}
 
 describe('rollup', () => {
   let verificationKey: string;
@@ -30,29 +48,16 @@ describe('rollup', () => {
 
       const txPreProcessor = new TransactionPreProcessor();
       const intermediateProofs: RollupProof[] = [];
-      const accumulator = new Accumulator();
+      const accumulator = new Accumulator<RollupProof>();
 
-      const intermediateTxs: SerializedTransaction[] = [];
+      const intermediateTxs: MyTransaction[] = [];
       for (const tx of txs) {
         const iTx = txPreProcessor.processTx(tx);
         intermediateTxs.push(iTx);
       }
       for (const iTx of intermediateTxs) {
-        const state = new RollupState({
-          initialRoot: iTx.initialRoot,
-          latestRoot: iTx.latestRoot,
-        });
-
         const start = Date.now();
-        const iProof = await Rollup.oneStep(
-          state,
-          iTx.initialRoot,
-          iTx.latestRoot,
-          iTx.key,
-          iTx.currentValue,
-          iTx.newValue,
-          iTx.merkleMapWitness,
-        );
+        const iProof = await iTx.baseFn();
         oneStepRunningTimes.push(Date.now() - start);
         intermediateProofs.push(iProof);
       }

@@ -1,15 +1,11 @@
-import { Field, MerkleMapWitness } from 'o1js';
 import { createInterface } from 'readline';
-import {
-  Rollup,
-  RollupState,
-  JSONSerializedTransaction,
-  SerializedTransaction,
-  RollupProof,
-} from '@ycryptx/rollup';
+import { Rollup, TransactionBase, RollupProofBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
-export const mapper = async (): Promise<void> => {
+export const mapper = async <
+  Transaction extends TransactionBase,
+  RollupProof extends RollupProofBase,
+>(): Promise<void> => {
   let compiled = false;
 
   const deriveKey = (lineNumber: number, sequentialism: number): string => {
@@ -51,35 +47,13 @@ export const mapper = async (): Promise<void> => {
       compiled = true;
     }
 
-    const jsonSerialized: JSONSerializedTransaction = JSON.parse(data);
+    let tx: Transaction;
+    tx.deserialize(data);
 
-    const serialized = new SerializedTransaction({
-      initialRoot: Field(jsonSerialized.initialRoot),
-      latestRoot: Field(jsonSerialized.latestRoot),
-      key: Field(jsonSerialized.key),
-      currentValue: Field(jsonSerialized.currentValue),
-      newValue: Field(jsonSerialized.newValue),
-      merkleMapWitness: MerkleMapWitness.fromJSON(
-        jsonSerialized.merkleMapWitness,
-      ),
-    });
-
-    const state = new RollupState({
-      initialRoot: serialized.initialRoot,
-      latestRoot: serialized.latestRoot,
-    });
     let proof: RollupProof;
     logger('mapper', `proving ${lineNumber}`);
     try {
-      proof = await Rollup.oneStep(
-        state,
-        serialized.initialRoot,
-        serialized.latestRoot,
-        serialized.key,
-        serialized.currentValue,
-        serialized.newValue,
-        serialized.merkleMapWitness,
-      );
+      proof = await tx.baseFn();
     } catch (err) {
       logger('mapper', `failed to prove ${lineNumber} ${err}`);
       throw err;

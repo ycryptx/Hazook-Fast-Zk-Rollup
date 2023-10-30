@@ -27,7 +27,7 @@ export class RollupState extends Struct({
       'createOneStep: initialRoot == witnessRootBefore',
     );
     witnessKey.assertEquals(key, 'createOneStep: witnessKey == key');
-    const [witnessRootAfter, _] = merkleMapWitness.computeRootAndKey(newValue);
+    const [witnessRootAfter] = merkleMapWitness.computeRootAndKey(newValue);
     latestRoot.assertEquals(
       witnessRootAfter,
       'createOneStep: latestRoot == witnessRootAfter',
@@ -117,13 +117,45 @@ export const Rollup = Experimental.ZkProgram({
   },
 });
 
-export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {
-  //
+// TODO: document
+export abstract class RollupProofBase {
+  abstract merge(newProof: RollupProofBase): Promise<RollupProofBase>;
+  abstract toJSON(): any;
+  static fromJSON(json: any): RollupProofBase {
+    return;
+  }
 }
 
-export type Transaction = number;
+// TODO: document
+export abstract class TransactionBase {
+  abstract serialize(): string;
+  abstract deserialize(serialized: string): void;
+  abstract baseFn(): Promise<any>;
+}
 
-export class SerializedTransaction {
+// TODO: explain
+export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {
+  public async merge(newProof: RollupProof): Promise<RollupProof> {
+    const currentState = new RollupState({
+      initialRoot: this.publicInput.initialRoot,
+      latestRoot: this.publicInput.latestRoot,
+    });
+
+    const newState = RollupState.createMerged(
+      currentState,
+      new RollupState({
+        initialRoot: newProof.publicInput.initialRoot,
+        latestRoot: newProof.publicInput.latestRoot,
+      }),
+    );
+
+    const mergedProof = await Rollup.merge(newState, this, newProof);
+    return mergedProof as RollupProof;
+  }
+}
+
+// TODO: explain
+export class MyTransaction extends TransactionBase {
   initialRoot: Field;
   latestRoot: Field;
   key: Field;
@@ -139,42 +171,53 @@ export class SerializedTransaction {
     newValue: Field;
     merkleMapWitness: MerkleMapWitness;
   }) {
-    const {
-      initialRoot,
-      latestRoot,
-      key,
-      currentValue,
-      newValue,
-      merkleMapWitness,
-    } = params;
-    this.initialRoot = initialRoot;
-    this.latestRoot = latestRoot;
-    this.key = key;
-    this.currentValue = currentValue;
-    this.newValue = newValue;
-    this.merkleMapWitness = merkleMapWitness;
+    super();
+    this.initialRoot = params.initialRoot;
+    this.latestRoot = params.latestRoot;
+    this.key = params.key;
+    this.currentValue = params.currentValue;
+    this.newValue = params.newValue;
+    this.merkleMapWitness = params.merkleMapWitness;
   }
 
-  toJSON(): JSONSerializedTransaction {
-    return {
+  public serialize(): string {
+    return JSON.stringify({
       initialRoot: this.initialRoot.toJSON(),
       latestRoot: this.latestRoot.toJSON(),
       key: this.key.toJSON(),
       currentValue: this.currentValue.toJSON(),
       newValue: this.newValue.toJSON(),
       merkleMapWitness: this.merkleMapWitness.toJSON(),
-    };
+    });
+  }
+
+  public deserialize(serialized: string): any {
+    const txJson = JSON.parse(serialized);
+    this.initialRoot = Field(txJson.initialRoot);
+    this.latestRoot = Field(txJson.latestRoot);
+    this.key = Field(txJson.key);
+    this.currentValue = Field(txJson.currentValue);
+    this.newValue = Field(txJson.newValue);
+    this.merkleMapWitness = MerkleMapWitness.fromJSON(txJson.merkleMapWitness);
+  }
+
+  public async baseFn(): Promise<any> {
+    const state = new RollupState({
+      initialRoot: this.initialRoot,
+      latestRoot: this.latestRoot,
+    });
+
+    return await Rollup.oneStep(
+      state,
+      this.initialRoot,
+      this.latestRoot,
+      this.key,
+      this.currentValue,
+      this.newValue,
+      this.merkleMapWitness,
+    );
   }
 }
-
-export type JSONSerializedTransaction = {
-  initialRoot: string;
-  latestRoot: string;
-  key: string;
-  currentValue: string;
-  newValue: string;
-  merkleMapWitness: string;
-};
 
 export class TransactionPreProcessor {
   merkleMap: MerkleMap;
@@ -184,7 +227,7 @@ export class TransactionPreProcessor {
     this.currentValue = Field(0);
   }
 
-  public processTx(tx: Transaction): SerializedTransaction {
+  public processTx(tx: number): MyTransaction {
     const initialRoot = this.merkleMap.getRoot();
     const newValue = Field(tx);
     const key = Field(this.merkleMap.tree.leafCount);
@@ -193,7 +236,7 @@ export class TransactionPreProcessor {
     this.merkleMap.set(key, newValue);
     this.currentValue = newValue;
 
-    return new SerializedTransaction({
+    return new MyTransaction({
       initialRoot: initialRoot,
       latestRoot: this.merkleMap.getRoot(),
       key,
@@ -204,36 +247,17 @@ export class TransactionPreProcessor {
   }
 }
 
-export class Accumulator {
-  private _accumulatedProof: RollupProof;
+//// TODO: consider removing
+// export class RollupWrapper<Rollup, Transaction> {
+//   private _rollup: Rollup;
+//   private _baseFunctionName: string;
 
-  public async addProof(proof: RollupProof): Promise<void> {
-    if (!this._accumulatedProof) {
-      this._accumulatedProof = proof;
-      return;
-    }
+//   constructor(rollup: Rollup, baseFunctionName: string) {
+//     this._rollup = rollup;
+//     this._baseFunctionName = baseFunctionName;
+//   }
 
-    const currentState = new RollupState({
-      initialRoot: this._accumulatedProof.publicInput.initialRoot,
-      latestRoot: this._accumulatedProof.publicInput.latestRoot,
-    });
-
-    const newState = RollupState.createMerged(
-      currentState,
-      new RollupState({
-        initialRoot: proof.publicInput.initialRoot,
-        latestRoot: proof.publicInput.latestRoot,
-      }),
-    );
-
-    this._accumulatedProof = await Rollup.merge(
-      newState,
-      this._accumulatedProof,
-      proof,
-    );
-  }
-
-  public get accumulatedProof(): RollupProof {
-    return this._accumulatedProof;
-  }
-}
+//   public callBaseFunction(t: Transaction): any {
+//     // this._rollup.callBaseFunction(this._baseFunctionName, t.serialize());
+//   }
+// }
