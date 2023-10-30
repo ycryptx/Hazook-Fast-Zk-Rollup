@@ -1,11 +1,11 @@
 variable "region" {
   description = "AWS Deployment region."
-  default = "eu-central-1"
+  default     = "eu-central-1"
 }
 
 variable "project" {
   description = "Project name exposed in AWS user tag"
-  default = "mina"
+  default     = "mina"
 }
 
 locals {
@@ -15,25 +15,25 @@ locals {
 terraform {
   backend "s3" {
     bucket = "mina-tf-state"
-    key = "tfstate"
+    key    = "tfstate"
     region = "eu-central-1"
   }
   required_providers {
     aws = {
-      source = "hashicorp/aws"
+      source  = "hashicorp/aws"
       version = "~> 5.4"
     }
   }
 }
 
 provider "aws" {
-  region = "${var.region}"
+  region = var.region
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
-  enable_dns_support = true
+  enable_dns_support   = true
   tags = {
     project = "${var.project}"
   }
@@ -67,24 +67,24 @@ resource "aws_s3_bucket" "emr_output" {
 resource "aws_s3_bucket_lifecycle_configuration" "emr_input_expiration" {
   bucket = aws_s3_bucket.emr_input.id
   rule {
-    id = "expiration"
+    id     = "expiration"
     status = "Enabled"
     expiration {
       days = 2
     }
-    filter { }
+    filter {}
   }
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "emr_output_expiration" {
   bucket = aws_s3_bucket.emr_output.id
   rule {
-    id = "expiration"
+    id     = "expiration"
     status = "Enabled"
     expiration {
       days = 2
     }
-    filter { }
+    filter {}
   }
 }
 
@@ -114,7 +114,7 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
         Action = [
           "s3:ListBucket",
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_s3_bucket.emr_data.arn
         ]
@@ -125,7 +125,7 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
           "s3:GetObject",
           "s3:DeleteObject",
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "${aws_s3_bucket.emr_data.arn}/*"
         ]
@@ -141,21 +141,21 @@ resource "aws_s3_object" "emr_bootstrap_script" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "emr_bootstrap_script.sh"
   source = "bootstrap_script"
-  etag = filemd5("emr_bootstrap_script.sh")
+  etag   = filemd5("emr_bootstrap_script.sh")
 }
 
 resource "aws_s3_object" "emr_reducer" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "reducer.js"
-  source = "../../map-reduce-scripts/scripts/reducer.js"
-  etag = filemd5("../../map-reduce-scripts/scripts/reducer.js")
+  source = "../../sequencer/scripts/reducer.js"
+  etag   = filemd5("../../sequencer/scripts/reducer.js")
 }
 
 resource "aws_s3_object" "emr_mapper" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "mapper.js"
-  source = "../../map-reduce-scripts/scripts/mapper.js"
-  etag = filemd5("../../map-reduce-scripts/scripts/mapper.js")
+  source = "../../sequencer/scripts/mapper.js"
+  etag   = filemd5("../../sequencer/scripts/mapper.js")
 }
 
 # Public Subnet Setup
@@ -166,37 +166,37 @@ resource "aws_s3_object" "emr_mapper" {
 # non-NATed gateway.
 
 resource "aws_subnet" "public_1" {
-  vpc_id = "${aws_vpc.main.id}"
-  cidr_block = "10.0.0.0/24"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.0.0/24"
   map_public_ip_on_launch = "true"
-  availability_zone = "${var.region}b"
+  availability_zone       = "${var.region}b"
   tags = {
     project = "${var.project}"
   }
 }
 
 resource "aws_internet_gateway" "main" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   tags = {
     project = "${var.project}"
   }
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
     # Public network: we don't NAT through the gateway.
-    gateway_id = "${aws_internet_gateway.main.id}"
+    gateway_id = aws_internet_gateway.main.id
   }
   tags = {
     project = "${var.project}"
   }
 }
 
-resource "aws_route_table_association" "public-1"{
-  subnet_id = "${aws_subnet.public_1.id}"
-  route_table_id = "${aws_route_table.public.id}"
+resource "aws_route_table_association" "public-1" {
+  subnet_id      = aws_subnet.public_1.id
+  route_table_id = aws_route_table.public.id
 }
 
 # Private Subnet Setup
@@ -207,8 +207,8 @@ resource "aws_route_table_association" "public-1"{
 
 
 resource "aws_subnet" "private_1" {
-  vpc_id = "${aws_vpc.main.id}"
-  cidr_block = "10.0.1.0/24"
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.1.0/24"
   availability_zone = "${var.region}b"
   tags = {
     project = "${var.project}"
@@ -224,27 +224,27 @@ resource "aws_eip" "nat_gateway" {
 
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat_gateway.id
-  subnet_id     = "${aws_subnet.public_1.id}"
+  subnet_id     = aws_subnet.public_1.id
   tags = {
     project = "${var.project}"
   }
 }
 
 resource "aws_route_table" "private_1" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   route {
     cidr_block = "0.0.0.0/0"
     # Private network, NAT-ing the egress
-    nat_gateway_id = "${aws_nat_gateway.main.id}"
+    nat_gateway_id = aws_nat_gateway.main.id
   }
   tags = {
     project = "${var.project}"
   }
 }
 
-resource "aws_route_table_association" "private_1"{
-  subnet_id = "${aws_subnet.private_1.id}"
-  route_table_id = "${aws_route_table.private_1.id}"
+resource "aws_route_table_association" "private_1" {
+  subnet_id      = aws_subnet.private_1.id
+  route_table_id = aws_route_table.private_1.id
 }
 
 # EC2 Security Groups
@@ -252,29 +252,29 @@ resource "aws_route_table_association" "private_1"{
 ####################
 
 resource "aws_security_group" "sequencer" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = -1
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
   # TODO: Mina node ingress
@@ -284,21 +284,21 @@ resource "aws_security_group" "sequencer" {
 }
 
 resource "aws_security_group" "emr_master" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = -1
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
 resource "aws_security_group" "emr_core" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = -1
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -349,25 +349,25 @@ resource "aws_iam_role" "iam_emr_ec2" {
 }
 
 resource "aws_iam_role_policy" "iam_emr_ec2" {
-  name = "iam-emr-ec2"
-  role = aws_iam_role.iam_emr_ec2.name
+  name   = "iam-emr-ec2"
+  role   = aws_iam_role.iam_emr_ec2.name
   policy = data.aws_iam_policy_document.ec2_bucket_access.json
 }
 
 resource "aws_iam_instance_profile" "emr_ec2" {
-  name  = "emr-ec2-profile"
+  name = "emr-ec2-profile"
   role = aws_iam_role.iam_emr_ec2.name
 }
 
 resource "aws_emr_cluster" "accumulator" {
-  name = "accumulator"
+  name          = "accumulator"
   release_label = "emr-6.11.0"
-  applications = [ "Hadoop" ]
-  service_role = "EMR_DefaultRole"
+  applications  = ["Hadoop"]
+  service_role  = "EMR_DefaultRole"
   ec2_attributes {
     subnet_id                         = aws_subnet.private_1.id
-    additional_master_security_groups = "${aws_security_group.emr_master.id}"
-    additional_slave_security_groups  = "${aws_security_group.emr_core.id}"
+    additional_master_security_groups = aws_security_group.emr_master.id
+    additional_slave_security_groups  = aws_security_group.emr_core.id
     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
   }
 
@@ -375,7 +375,7 @@ resource "aws_emr_cluster" "accumulator" {
 
   master_instance_group {
     instance_count = 1
-    instance_type = "m5a.2xlarge"
+    instance_type  = "m5a.2xlarge"
     # The spot market for this instance has been stable and under .15 for
     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
     # Note: we probably want a non-spot master node in production.
@@ -397,7 +397,7 @@ resource "aws_emr_cluster" "accumulator" {
 
   tags = {
     for-use-with-amazon-emr-managed-policies = true
-    project = "mina"
+    project                                  = "mina"
   }
 }
 
@@ -455,15 +455,15 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
 }
 
 resource "aws_iam_policy" "sequencer_policy" {
-  name = "sequencer-policy"
+  name   = "sequencer-policy"
   policy = data.aws_iam_policy_document.sequencer_role_policy.json
 }
 
 resource "aws_iam_role" "sequencer_role" {
-  name = "sequencer-role"
-  path = "/"
-  assume_role_policy = data.aws_iam_policy_document.sequencer_assume_role_policy.json
-  managed_policy_arns = [ aws_iam_policy.sequencer_policy.arn ]
+  name                = "sequencer-role"
+  path                = "/"
+  assume_role_policy  = data.aws_iam_policy_document.sequencer_assume_role_policy.json
+  managed_policy_arns = [aws_iam_policy.sequencer_policy.arn]
 }
 
 resource "aws_iam_instance_profile" "sequencer_emr_profile" {
@@ -473,19 +473,19 @@ resource "aws_iam_instance_profile" "sequencer_emr_profile" {
 
 resource "aws_eip" "sequencer-eip" {
   instance = aws_instance.sequencer.id
-  domain = "vpc"
-   tags = {
+  domain   = "vpc"
+  tags = {
     project = "${var.project}"
-   }
+  }
 }
 
 resource "aws_instance" "sequencer" {
-  ami = "ami-0d6ee9d5e1c985df6" # NixOS 23.05.426.afc48694f2a
-  subnet_id = aws_subnet.public_1.id
-  instance_type = "m5a.large"
-  user_data = file("./sequencer-nixos-config.nix")
-  iam_instance_profile = aws_iam_instance_profile.sequencer_emr_profile.name
-  vpc_security_group_ids = [ aws_security_group.sequencer.id ]
+  ami                    = "ami-0d6ee9d5e1c985df6" # NixOS 23.05.426.afc48694f2a
+  subnet_id              = aws_subnet.public_1.id
+  instance_type          = "m5a.large"
+  user_data              = file("./sequencer-nixos-config.nix")
+  iam_instance_profile   = aws_iam_instance_profile.sequencer_emr_profile.name
+  vpc_security_group_ids = [aws_security_group.sequencer.id]
   root_block_device {
     volume_size = 15
   }
