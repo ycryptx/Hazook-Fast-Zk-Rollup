@@ -16,6 +16,8 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
   }
 };
 
+// TODO: add the ability to preprocess transactions 1-by-1 and not from an input file
+// also TODO: add the ability to submit to S3 transaction by transaction
 export const preProcessRawTransactions = async (
   inputFile: string,
 ): Promise<{ preprocessedFile: string; lineNumber: number }> => {
@@ -40,9 +42,7 @@ export const preProcessRawTransactions = async (
     const tx = txPreProcessor.processTx(parseInt(line));
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${lineNumber}\t${sequentialism}\t${'0'}\t${JSON.stringify(
-        tx.toJSON(),
-      )}\n`,
+      `${lineNumber}\t${sequentialism}\t${'0'}\t${tx.serialize()}\n`,
     );
     lineNumber += 1;
   }

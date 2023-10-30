@@ -1,3 +1,4 @@
+import { MyTransaction, RollupProof } from '@ycryptx/rollup';
 import { mapper } from './mapper';
 
-mapper();
+mapper<MyTransaction, RollupProof>();
