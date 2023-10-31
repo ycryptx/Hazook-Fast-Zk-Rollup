@@ -6,7 +6,6 @@ import {
   Empty,
   MerkleMapWitness,
   MerkleMap,
-  Proof,
 } from 'o1js';
 
 export class RollupState extends Struct({
@@ -126,14 +125,14 @@ export abstract class RollupProofBase {
 }
 
 export interface RollupBase {
-  compile: () => void;
+  compile: () => Promise<any>;
 }
 
 // TODO: document
 export abstract class TransactionBase {
   abstract serialize(): string;
   abstract deserialize(serialized: string): void;
-  abstract baseFn(): Promise<any>;
+  abstract baseFn(): Promise<RollupProofBase>;
 }
 
 // TODO: explain
@@ -156,8 +155,7 @@ export class MyRollupProof extends Experimental.ZkProgram.Proof(Rollup) {
     return mergedProof as MyRollupProof;
   }
   public fromJSON(json: any): MyRollupProof {
-    const proofClass = Proof<RollupState, void>;
-    return proofClass.fromJSON(json) as MyRollupProof;
+    return MyRollupProof.fromJSON(json) as MyRollupProof;
   }
 }
 
@@ -179,12 +177,14 @@ export class MyTransaction extends TransactionBase {
     merkleMapWitness: MerkleMapWitness;
   }) {
     super();
-    this.initialRoot = params.initialRoot;
-    this.latestRoot = params.latestRoot;
-    this.key = params.key;
-    this.currentValue = params.currentValue;
-    this.newValue = params.newValue;
-    this.merkleMapWitness = params.merkleMapWitness;
+    if (params != null) {
+      this.initialRoot = params.initialRoot;
+      this.latestRoot = params.latestRoot;
+      this.key = params.key;
+      this.currentValue = params.currentValue;
+      this.newValue = params.newValue;
+      this.merkleMapWitness = params.merkleMapWitness;
+    }
   }
 
   public serialize(): string {

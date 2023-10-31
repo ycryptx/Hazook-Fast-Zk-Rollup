@@ -2,11 +2,10 @@ import { createInterface } from 'readline';
 import { TransactionBase, RollupProofBase, RollupBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
-export const mapper = async <
-  Transaction extends TransactionBase,
-  RollupProof extends RollupProofBase,
->(
+export const mapper = async (
   rollup: RollupBase,
+  tx: TransactionBase,
+  proof: RollupProofBase,
 ): Promise<void> => {
   let compiled = false;
 
@@ -49,10 +48,8 @@ export const mapper = async <
       compiled = true;
     }
 
-    let tx: Transaction;
     tx.deserialize(data);
 
-    let proof: RollupProof;
     logger('mapper', `proving ${lineNumber}`);
     try {
       proof = await tx.baseFn();
