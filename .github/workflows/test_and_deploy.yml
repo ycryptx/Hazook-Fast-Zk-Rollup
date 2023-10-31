@@ -60,7 +60,7 @@ jobs:
           rootdir: ""
           workdir: ""
       - name: install yarn dependencies
-        run: yarn install
+        run: yarn install && yarn rollup build
       - name: re-build mapper/reducer scripts
         run: make build-map-reduce-scripts
       - name: Push EMR Mapper/Reducer/Bootstrap to S3
