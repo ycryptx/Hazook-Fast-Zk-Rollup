@@ -3652,11 +3652,6 @@ jest-message-util@^29.6.2:
     slash "^3.0.0"
     stack-utils "^2.0.3"
 
-jest-mock-process@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/jest-mock-process/-/jest-mock-process-2.0.0.tgz#2bf7993173d1025930ec246eb333a8827f2be297"
-  integrity sha512-bybzszPfvrYhplymvUNFc130ryvjSCW1JSCrLA0LiV0Sv9TrI+cz90n3UYUPoT2nhNL6c6IV9LxUSFJF9L9tHQ==
-
 jest-mock@^29.6.2:
   version "29.6.2"
   resolved "https://registry.yarnpkg.com/jest-mock/-/jest-mock-29.6.2.tgz#ef9c9b4d38c34a2ad61010a021866dad41ce5e00"
@@ -4097,11 +4092,6 @@ mkdirp@^1.0.3:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
-
-mock-stdin@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/mock-stdin/-/mock-stdin-1.0.0.tgz#efcfaf4b18077e14541742fd758b9cae4e5365ea"
-  integrity sha512-tukRdb9Beu27t6dN+XztSRHq9J0B/CoAOySGzHfn8UTfmqipA5yNT/sDUEyYdAV3Hpka6Wx6kOMxuObdOex60Q==
 
 ms@2.1.2:
   version "2.1.2"

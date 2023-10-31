@@ -14,18 +14,18 @@ import * as randString from 'randomstring';
 import { Mode } from '../types';
 import { Uploader } from '../uploader';
 import { runShellCommand, preProcessRawTransactions } from '../utils';
-import { RollupProof } from '@ycryptx/rollup';
+import { RollupProofBase } from '@ycryptx/rollup';
 
 const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
 
-export class MapReduceClient {
+export class MapReduceClient<RollupProof extends RollupProofBase> {
   private mode: Mode;
-  private uploader: Uploader;
+  private uploader: Uploader<RollupProof>;
   private emrClient?: EMRClient;
 
   constructor(mode: Mode, region: string) {
     this.mode = mode;
-    this.uploader = new Uploader(mode, region);
+    this.uploader = new Uploader<RollupProof>(mode, region);
 
     if (this.mode == Mode.EMR) {
       this.emrClient = new EMRClient({ region });
@@ -172,6 +172,7 @@ export class MapReduceClient {
         StepId: data.StepIds[0],
       },
     );
+
     const result = await this.uploader.getEMROutput(outputDir);
 
     const end = Date.now();

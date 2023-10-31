@@ -1,7 +1,0 @@
-/**/*.js
-/**/*.cjs
-build
-bundle
-coverage
-node_modules
-scripts

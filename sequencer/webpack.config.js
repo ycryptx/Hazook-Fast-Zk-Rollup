@@ -3,12 +3,12 @@ const nodeExternals = require('webpack-node-externals')
 
 module.exports =  {
   target: "node",
-  entry: './build/src/index.js', // make sure this matches the main root of your code
+  entry: './build/src/sequencer.js', // make sure this matches the main root of your code
   externals: [
-    nodeExternals({allowlist: ['@ycryptx/rollup', '@ycryptx/map-reduce-scripts']}),
+    nodeExternals({allowlist: ['@ycryptx/rollup']}),
     nodeExternals({
       modulesDir: path.resolve(__dirname, '../node_modules'),
-      allowlist: ['@ycryptx/rollup', '@ycryptx/map-reduce-scripts']
+      allowlist: ['@ycryptx/rollup']
     }),
   ], // removes node_modules from your final bundle
   module: {

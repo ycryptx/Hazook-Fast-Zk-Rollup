@@ -6,12 +6,13 @@ import {
   ServerReflection,
 } from 'nice-grpc-server-reflection';
 import { Sequencer, SequencerServiceDefinition } from './services';
+import { RollupProofBase } from '@ycryptx/rollup';
 
-export const initServer = (): void => {
+export const initServer = <RollupProof extends RollupProofBase>(): void => {
   const grpcAddress = `0.0.0.0:${process.env.GRPC_SERVER_PORT}`;
   const server = createServer();
 
-  server.add(SequencerServiceDefinition, new Sequencer());
+  server.add(SequencerServiceDefinition, new Sequencer<RollupProof>());
 
   // add server reflection service
   server.add(

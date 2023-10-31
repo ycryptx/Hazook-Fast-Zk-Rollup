@@ -20,10 +20,10 @@ module.exports = {
       },
     ],
   },
-  entry: './build/src/reducer/index.js',
+  entry: './build/src/mapper.js',
   output: {
-    path: path.join(__dirname, 'bundle', 'reducer'), // this can be any path and directory you want
-    filename: 'index.js',
+    path: path.join(__dirname, 'bundle', 'map-reduce'), // this can be any path and directory you want
+    filename: 'mapper.js',
   },
   optimization: {
     minimize: false, // enabling this reduces file size and readability

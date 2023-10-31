@@ -1,9 +1,11 @@
 {
-    "private": true,
-    "workspaces": ["map-reduce-scripts", "rollup", "sequencer"],
-    "scripts": {
-      "map-reduce-scripts": "yarn workspace @ycryptx/map-reduce-scripts",
-      "rollup": "yarn workspace @ycryptx/rollup",
-      "sequencer": "yarn workspace @ycryptx/sequencer"
-    }
+  "private": true,
+  "workspaces": [
+    "rollup",
+    "sequencer"
+  ],
+  "scripts": {
+    "rollup": "yarn workspace @ycryptx/rollup",
+    "sequencer": "yarn workspace @ycryptx/sequencer"
   }
+}

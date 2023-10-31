@@ -6,6 +6,7 @@ import {
   Empty,
   MerkleMapWitness,
   MerkleMap,
+  Proof,
 } from 'o1js';
 
 export class RollupState extends Struct({
@@ -119,11 +120,13 @@ export const Rollup = Experimental.ZkProgram({
 
 // TODO: document
 export abstract class RollupProofBase {
-  abstract merge(newProof: RollupProofBase): Promise<RollupProofBase>;
-  abstract toJSON(): any;
-  static fromJSON(json: any): RollupProofBase {
-    return;
-  }
+  public abstract merge(newProof: RollupProofBase): Promise<RollupProofBase>;
+  public abstract toJSON(): any;
+  public abstract fromJSON(p: any): RollupProofBase;
+}
+
+export interface RollupBase {
+  compile: () => void;
 }
 
 // TODO: document
@@ -134,8 +137,8 @@ export abstract class TransactionBase {
 }
 
 // TODO: explain
-export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {
-  public async merge(newProof: RollupProof): Promise<RollupProof> {
+export class MyRollupProof extends Experimental.ZkProgram.Proof(Rollup) {
+  public async merge(newProof: MyRollupProof): Promise<MyRollupProof> {
     const currentState = new RollupState({
       initialRoot: this.publicInput.initialRoot,
       latestRoot: this.publicInput.latestRoot,
@@ -150,7 +153,11 @@ export class RollupProof extends Experimental.ZkProgram.Proof(Rollup) {
     );
 
     const mergedProof = await Rollup.merge(newState, this, newProof);
-    return mergedProof as RollupProof;
+    return mergedProof as MyRollupProof;
+  }
+  public fromJSON(json: any): MyRollupProof {
+    const proofClass = Proof<RollupState, void>;
+    return proofClass.fromJSON(json) as MyRollupProof;
   }
 }
 
@@ -246,18 +253,3 @@ export class TransactionPreProcessor {
     });
   }
 }
-
-//// TODO: consider removing
-// export class RollupWrapper<Rollup, Transaction> {
-//   private _rollup: Rollup;
-//   private _baseFunctionName: string;
-
-//   constructor(rollup: Rollup, baseFunctionName: string) {
-//     this._rollup = rollup;
-//     this._baseFunctionName = baseFunctionName;
-//   }
-
-//   public callBaseFunction(t: Transaction): any {
-//     // this._rollup.callBaseFunction(this._baseFunctionName, t.serialize());
-//   }
-// }
