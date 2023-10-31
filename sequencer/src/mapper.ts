@@ -1,4 +1,4 @@
 import { Rollup, MyTransaction, MyRollupProof } from '@ycryptx/rollup';
-import { mapper } from './hadoop/mapper/mapper';
+import { mapper } from './hadoop/mapper';
 
-mapper<typeof Rollup, MyTransaction, MyRollupProof>();
+mapper<MyTransaction, MyRollupProof>(Rollup);

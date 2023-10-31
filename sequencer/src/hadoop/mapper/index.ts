@@ -3,12 +3,10 @@ import { TransactionBase, RollupProofBase, RollupBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
 export const mapper = async <
-  Rollup extends RollupBase,
   Transaction extends TransactionBase,
-  RollupProof extends RollupProofBase,
->(): Promise<void> => {
+  RollupProof extends RollupProofBase
+>(rollup: RollupBase): Promise<void> => {
   let compiled = false;
-  let rollup: Rollup;
 
   const deriveKey = (lineNumber: number, sequentialism: number): string => {
     const reducerId = lineNumber - (lineNumber % sequentialism);

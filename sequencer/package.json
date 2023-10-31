@@ -33,7 +33,7 @@
   },
   "scripts": {
     "start": "node bundle/bundle.js",
-    "clean": "rimraf coverage build tmp",
+    "clean": "rimraf coverage build bundle",
     "prebuild": "npm run lint",
     "build": "npm run build:protobuf && tsc -p tsconfig.json && webpack",
     "build:scripts": "npm run clean && tsc -p tsconfig.json && webpack --config webpack.config.mapper.js && webpack --config webpack.config.reducer.js",
