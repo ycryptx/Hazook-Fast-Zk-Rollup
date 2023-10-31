@@ -7,7 +7,7 @@ import {
   ListObjectsV2Command,
   GetObjectCommandOutput,
 } from '@aws-sdk/client-s3';
-import { RollupProof } from '@ycryptx/rollup';
+import { RollupProofBase } from '@ycryptx/rollup';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';
@@ -15,7 +15,7 @@ import { runShellCommand } from '../utils';
 /**
  * Uploads data to make it available to the Hadoop map-reduce pipeline
  */
-export class Uploader {
+export class Uploader<RollupProof extends RollupProofBase> {
   private mode: Mode;
   private s3Client?: S3Client;
 
@@ -52,9 +52,12 @@ export class Uploader {
     const serializedHadoopResults = splitHadoopResults.map((proofString) =>
       JSON.parse(proofString),
     );
+
+    let rp: RollupProof;
+
     const sortedProofs: RollupProof[] = serializedHadoopResults
       .sort((res1, res2) => res1.order - res2.order)
-      .map((res) => RollupProof.fromJSON(res.proof) as RollupProof);
+      .map((res) => rp.fromJSON(res.proof) as RollupProof);
     return sortedProofs;
   }
 
@@ -80,9 +83,12 @@ export class Uploader {
       .filter((proof) => proof.trim() != '')
       .map((proof) => JSON.parse(proof.trim()));
 
+    let rp: RollupProof;
+
     const sortedProofs: RollupProof[] = serializedProofs
       .sort((res1, res2) => parseInt(res1.order) - parseInt(res2.order))
-      .map((res) => RollupProof.fromJSON(res.proof) as RollupProof);
+      .map((res) => rp.fromJSON(res.proof) as RollupProof);
+
     return sortedProofs;
   }
 
@@ -156,26 +162,28 @@ export class Uploader {
       process.env.REDUCER_FILE_PATH,
     );
 
-    runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user`);
-    runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user/hduser`);
-    runShellCommand(`docker exec ${container} hdfs dfs -mkdir input`);
+    runShellCommand(`docker exec ${container} hdfs dfs - mkdir / user`);
     runShellCommand(
-      `docker cp ${filePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
+      `docker exec ${container} hdfs dfs - mkdir / user / hduser`,
+    );
+    runShellCommand(`docker exec ${container} hdfs dfs - mkdir input`);
+    runShellCommand(
+      `docker cp ${filePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
     );
     runShellCommand(
-      `docker exec ${container} hdfs dfs -put /home/hduser/hadoop-3.3.3/etc/hadoop/${fileName} input`,
+      `docker exec ${container} hdfs dfs - put / home / hduser / hadoop - 3.3.3 / etc / hadoop / ${fileName} input`,
     );
     runShellCommand(
-      `docker cp ${mapperFilePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
+      `docker cp ${mapperFilePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
     );
     runShellCommand(
-      `docker cp ${reducerFilePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
-    );
-
-    runShellCommand(
-      `docker exec ${container} sudo chmod a+x /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js`,
+      `docker cp ${reducerFilePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
     );
 
-    return `/user/hduser/input/${fileName}`;
+    runShellCommand(
+      `docker exec ${container} sudo chmod a + x / home / hduser / hadoop - 3.3.3 / etc / hadoop / mapper.js / home / hduser / hadoop - 3.3.3 / etc / hadoop / reducer.js`,
+    );
+
+    return `/ user / hduser / input / ${fileName} `;
   }
 }

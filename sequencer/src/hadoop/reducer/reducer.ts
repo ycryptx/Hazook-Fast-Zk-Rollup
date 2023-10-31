@@ -1,16 +1,19 @@
 import { createInterface } from 'readline';
-import { Rollup, RollupProof, RollupProofBase } from '@ycryptx/rollup';
+import { RollupBase, RollupProofBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
+// TODO: move this to a shared types file
 type OrderedAccumulatedProof = {
   order: number;
   proof: RollupProofBase;
 };
 
 export const reducer = async <
+  Rollup extends RollupBase,
   RollupProof extends RollupProofBase,
 >(): Promise<void> => {
   let compiled = false;
+  let rollup: Rollup;
 
   const rl = createInterface({
     input: process.stdin,
@@ -37,7 +40,7 @@ export const reducer = async <
     if (!compiled) {
       logger('reducer', `compiling zkapp`);
       try {
-        await Rollup.compile();
+        await rollup.compile();
       } catch (err) {
         logger('reducer', `failed compiling zkapp`);
         throw err;
@@ -49,9 +52,9 @@ export const reducer = async <
       partitionKey = _partitionKey;
     }
 
-    const intermediateProof = RollupProof.fromJSON(
-      JSON.parse(proofString),
-    ) as unknown as RollupProof;
+    let rp: RollupProof;
+
+    const intermediateProof = rp.fromJSON(JSON.parse(proofString));
     intermediateProofs[_partitionKey].proofs.push({
       proof: intermediateProof,
       order: parseInt(lineNumber),

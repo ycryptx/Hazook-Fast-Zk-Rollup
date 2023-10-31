@@ -1,4 +1,4 @@
-import { RollupProof } from '@ycryptx/rollup';
+import { MyRollupProof, Rollup } from '@ycryptx/rollup';
 import { reducer } from './hadoop/reducer/reducer';
 
-reducer<RollupProof>();
+reducer<typeof Rollup, MyRollupProof>();

@@ -1,3 +1,4 @@
+import { RollupProofBase } from '@ycryptx/rollup';
 import {
   Case,
   DemoRequest,
@@ -10,13 +11,20 @@ import { Mode, MapReduceClient } from '../../map-reduce';
 
 const MODE = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
 const REGION = process.env.REGION;
-const mapReduce = new MapReduceClient(MODE, REGION);
 
 /**
  * sequencer
  *
  */
-class Sequencer implements SequencerServiceImplementation {
+class Sequencer<RollupProof extends RollupProofBase>
+  implements SequencerServiceImplementation
+{
+  mapReduce: MapReduceClient<RollupProof>;
+
+  constructor() {
+    this.mapReduce = new MapReduceClient<RollupProof>(MODE, REGION);
+  }
+
   /**
    * Implements the demo RPC method.
    */
@@ -42,7 +50,7 @@ class Sequencer implements SequencerServiceImplementation {
     }
 
     // start Hadoop map-reduce operation
-    const proof = await mapReduce.process(inputFile);
+    const proof = await this.mapReduce.process(inputFile);
 
     response.result = JSON.stringify(proof.toJSON());
 

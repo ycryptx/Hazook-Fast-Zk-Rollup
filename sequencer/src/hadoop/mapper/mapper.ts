@@ -1,12 +1,14 @@
 import { createInterface } from 'readline';
-import { Rollup, TransactionBase, RollupProofBase } from '@ycryptx/rollup';
+import { TransactionBase, RollupProofBase, RollupBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
 export const mapper = async <
+  Rollup extends RollupBase,
   Transaction extends TransactionBase,
   RollupProof extends RollupProofBase,
 >(): Promise<void> => {
   let compiled = false;
+  let rollup: Rollup;
 
   const deriveKey = (lineNumber: number, sequentialism: number): string => {
     const reducerId = lineNumber - (lineNumber % sequentialism);
@@ -38,7 +40,7 @@ export const mapper = async <
     if (!compiled) {
       logger('mapper', `compiling zkapp`);
       try {
-        await Rollup.compile();
+        await rollup.compile();
       } catch (err) {
         logger('mapper', `failed to compile zkapp ${err}`);
         throw err;

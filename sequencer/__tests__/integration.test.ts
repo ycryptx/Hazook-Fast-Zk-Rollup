@@ -2,6 +2,7 @@ import 'dotenv/config';
 import * as path from 'path';
 import { MapReduceClient } from '../src/map-reduce';
 import { Mode } from '../src/map-reduce';
+import { MyRollupProof } from '@ycryptx/rollup';
 
 /**
  * Have each state be the hash of a number, and each transaction be a number.
@@ -9,7 +10,7 @@ import { Mode } from '../src/map-reduce';
  * Use that to accumulate 8, 64, 256, 2048, and 16384 transactions.
  */
 describe('integration tests', () => {
-  let mapReduce: MapReduceClient;
+  let mapReduce: MapReduceClient<MyRollupProof>;
 
   beforeAll(() => {
     process.env.MAPPER_FILE_PATH = '../../sequencer/__tests__/misc/mapper.js';
