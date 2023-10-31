@@ -17,6 +17,8 @@ up-local-accumulator: # stand up a Hadoop Single Node Cluster conatainer
 	docker run --rm --name mina-accumulator -p 9864:9864 -p 9870:9870 -p 8088:8088 -p 9000:9000 --hostname localhost $(LOCAL_HADOOP_IMAGE_NAME) --memory="12g" --cpus=5 &
 
 build-map-reduce-scripts: # builds mapper and reducer scripts to be uploaded to S3
+	rm -rf sequencer/scripts; \
+	mkdir sequencer/scripts; \
 	yarn sequencer build:scripts; \
 	echo '#!/usr/bin/env node\n' > ./sequencer/scripts/mapper.js; \
 	echo '#!/usr/bin/env node\n' > ./sequencer/scripts/reducer.js; \
