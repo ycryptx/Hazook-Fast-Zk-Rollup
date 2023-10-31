@@ -8,9 +8,9 @@ type OrderedAccumulatedProof = {
   proof: RollupProofBase;
 };
 
-export const reducer = async <
-  RollupProof extends RollupProofBase
->(rollup: RollupBase): Promise<void> => {
+export const reducer = async <RollupProof extends RollupProofBase>(
+  rollup: RollupBase,
+): Promise<void> => {
   let compiled = false;
 
   const rl = createInterface({

@@ -4,8 +4,10 @@ import { logger } from '../utils';
 
 export const mapper = async <
   Transaction extends TransactionBase,
-  RollupProof extends RollupProofBase
->(rollup: RollupBase): Promise<void> => {
+  RollupProof extends RollupProofBase,
+>(
+  rollup: RollupBase,
+): Promise<void> => {
   let compiled = false;
 
   const deriveKey = (lineNumber: number, sequentialism: number): string => {
