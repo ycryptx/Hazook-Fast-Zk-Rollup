@@ -12,7 +12,6 @@ COPY --from=builder /app/sequencer/package.json ./sequencer/
 COPY --from=builder /app/sequencer/proto/protoset.bin ./sequencer/proto/
 COPY --from=builder /app/sequencer/preprocessed ./sequencer/preprocessed
 COPY --from=builder /app/sequencer/data ./sequencer/data
-COPY --from=builder /app/sequencer/scripts  ./scripts
 COPY --from=builder /app/rollup/build ./rollup/build
 COPY --from=builder /app/rollup/package.json ./rollup/
 COPY ./package.json ./yarn.lock ./tsconfig.json ./
