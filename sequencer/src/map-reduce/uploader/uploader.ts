@@ -7,7 +7,7 @@ import {
   ListObjectsV2Command,
   GetObjectCommandOutput,
 } from '@aws-sdk/client-s3';
-import { RollupProofBase } from '@ycryptx/rollup';
+import { MyRollupProof, RollupProofBase } from '@ycryptx/rollup';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';
@@ -53,11 +53,11 @@ export class Uploader<RollupProof extends RollupProofBase> {
       JSON.parse(proofString),
     );
 
-    let rp: RollupProof;
-
     const sortedProofs: RollupProof[] = serializedHadoopResults
       .sort((res1, res2) => res1.order - res2.order)
-      .map((res) => rp.fromJSON(res.proof) as RollupProof);
+      .map(
+        (res) => MyRollupProof.fromJSON(res.proof) as unknown as RollupProof,
+      ); // TODO: find a way to do this generically
     return sortedProofs;
   }
 
@@ -83,11 +83,11 @@ export class Uploader<RollupProof extends RollupProofBase> {
       .filter((proof) => proof.trim() != '')
       .map((proof) => JSON.parse(proof.trim()));
 
-    let rp: RollupProof;
-
     const sortedProofs: RollupProof[] = serializedProofs
       .sort((res1, res2) => parseInt(res1.order) - parseInt(res2.order))
-      .map((res) => rp.fromJSON(res.proof) as RollupProof);
+      .map(
+        (res) => MyRollupProof.fromJSON(res.proof) as unknown as RollupProof,
+      ); // TODO: find a way to do this generically
 
     return sortedProofs;
   }
