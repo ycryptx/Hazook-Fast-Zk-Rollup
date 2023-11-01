@@ -152,10 +152,10 @@ export class MyRollupProof extends Experimental.ZkProgram.Proof(Rollup) {
     );
 
     const mergedProof = await Rollup.merge(newState, this, newProof);
-    return mergedProof as MyRollupProof;
+    return new MyRollupProof(mergedProof);
   }
   public fromJSON(json: any): MyRollupProof {
-    return MyRollupProof.fromJSON(json) as MyRollupProof;
+    return new MyRollupProof(MyRollupProof.fromJSON(json));
   }
 }
 

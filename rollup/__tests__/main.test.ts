@@ -10,7 +10,7 @@ import {
 
 const txs = [0, 1, 2, 3, 4, 5, 6, 7];
 
-// TODO: consider using this in mapper script
+// TODO: consider using this in reducer script
 class Accumulator<RollupProof extends RollupProofBase> {
   private _accumulatedProof: RollupProof;
 

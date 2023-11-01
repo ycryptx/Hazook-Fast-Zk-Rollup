@@ -28,7 +28,7 @@ export const reducer = async (
 
   for await (const line of rl) {
     const [_partitionKey, lineNumber, proofString] = line.split('\t');
-    logger('reducer', `got line ${lineNumber}, partition ${_partitionKey}`);
+    logger('reducer', `got proof ${lineNumber}, partition ${_partitionKey}`);
 
     if (!intermediateProofs[_partitionKey]) {
       intermediateProofs[_partitionKey] = {
@@ -61,6 +61,7 @@ export const reducer = async (
     // speeds up the reducer
   }
 
+  // proofs accumulated by partition
   const accumulatedProofs: OrderedAccumulatedProof[] = [];
 
   for (const partition of Object.keys(intermediateProofs)) {
@@ -69,7 +70,10 @@ export const reducer = async (
     ].proofs.sort((entry1, entry2) => entry1.order - entry2.order);
 
     for (const orderedProof of intermediateProofs[partition].proofs) {
-      logger('reducer', `proving a proof in partition ${partition}`);
+      logger(
+        'reducer',
+        `merging proof ${orderedProof.order} in partition ${partition}`,
+      );
       try {
         if (!intermediateProofs[partition].accumulated) {
           intermediateProofs[partition].accumulated = orderedProof.proof;
@@ -79,10 +83,13 @@ export const reducer = async (
           partition
         ].accumulated.merge(orderedProof.proof);
       } catch (err) {
-        logger('reducer', `failed proving a proof in partition ${partition}`);
+        logger(
+          'reducer',
+          `failed merging proof ${orderedProof.order} in partition ${partition}`,
+        );
         throw err;
       }
-      logger('reducer', `proof finished`);
+      logger('reducer', `finished merging proof ${orderedProof.order}`);
     }
     accumulatedProofs.push({
       order: parseInt(partition),
@@ -95,6 +102,9 @@ export const reducer = async (
     result += `${JSON.stringify(accumulatedProof)}\n`;
   }
   process.stdout.write(result);
-  logger('reducer', `done`);
+  logger(
+    'reducer',
+    `done: partitions ${accumulatedProofs.map((p) => p.order)}`,
+  );
   return;
 };

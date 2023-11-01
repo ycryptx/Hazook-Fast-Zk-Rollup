@@ -19,6 +19,7 @@ up-local-accumulator: # stand up a Hadoop Single Node Cluster conatainer
 build-map-reduce-scripts: # builds mapper and reducer scripts to be uploaded to S3
 	rm -rf sequencer/scripts; \
 	mkdir sequencer/scripts; \
+	yarn rollup build; \
 	yarn sequencer build:scripts; \
 	echo '#!/usr/bin/env node\n' > ./sequencer/scripts/mapper.js; \
 	echo '#!/usr/bin/env node\n' > ./sequencer/scripts/reducer.js; \

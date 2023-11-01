@@ -27,6 +27,10 @@ export const mapper = async (
     const [, lineNumber, sequentialism, isIntermediate, data] = // the first \t separated field is a key set by nLineInputFormat
       line.split('\t');
 
+    if (!data) {
+      continue;
+    }
+
     logger('mapper', `got line ${lineNumber}`);
 
     const mapKey = deriveKey(parseInt(lineNumber), parseInt(sequentialism));
