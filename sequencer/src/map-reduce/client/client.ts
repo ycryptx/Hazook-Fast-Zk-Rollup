@@ -58,9 +58,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-            inputLocation,
-            proofs.length > 0 ? proofs.length : lineNumber,
-          ));
+          inputLocation,
+          proofs.length > 0 ? proofs.length : lineNumber,
+        ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -140,10 +140,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               'hadoop-streaming',
               '-files',
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
-              '-D',
-              `mapreduce.input.lineinputformat.linespermap=${
-                Math.round(lineNumber / 15) || 1
-              }`, // this controls mapper sequentialism (15 is chosen quite arbitrarily)
               '-input',
               `s3://${inputFile}`,
               '-output',
@@ -152,8 +148,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               'mapper.js',
               '-reducer',
               'reducer.js',
-              '-inputformat',
-              'org.apache.hadoop.mapred.lib.NLineInputFormat',
             ],
           },
           ActionOnFailure: 'CONTINUE',
