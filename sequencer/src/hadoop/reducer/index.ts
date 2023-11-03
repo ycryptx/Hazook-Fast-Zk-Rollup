@@ -60,24 +60,18 @@ export const reducer = async (
       continue;
     }
 
-    // TODO: see if moving the proof generation from within the line reading
-    // speeds up the reducer
     let proofs = intermediateProofs[_partitionKey].proofs;
 
     // push the proof to the array in-order
     for (let i = 0; i < proofs.length; i++) {
-      if (i == proofs.length - 1) {
-        proofs.push(orderedProofToAdd);
-      }
       if (proofs[i].order < _lineNumber) {
-        if (i == 0) {
-          proofs = [orderedProofToAdd].concat(proofs);
-        }
-        proofs = proofs
-          .slice(0, i - 1)
-          .concat([orderedProofToAdd])
-          .concat(proofs.slice(i - 1));
+        continue;
       }
+      proofs = proofs
+        .slice(0, i)
+        .concat([orderedProofToAdd])
+        .concat(proofs.slice(i));
+      break;
     }
 
     // try to merge consecutive proofs
