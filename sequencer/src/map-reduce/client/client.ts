@@ -9,6 +9,7 @@ import {
   ListClustersCommand,
   ClusterState,
   ScaleDownBehavior,
+  ComputeLimitsUnitType,
 } from '@aws-sdk/client-emr';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
@@ -191,13 +192,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       ServiceRole: 'EMR_DefaultRole',
       JobFlowRole: 'emr-ec2-profile',
       Configurations: [
-        // {
-        //   Classification: 'yarn-site',
-        //   Properties: {
-        //     'yarn.nodemanager.resource.cpu-vcores': '16', // Set the number of CPU cores allocated to each core node
-        //     'yarn.nodemanager.resource.memory-mb': '24576', // Set the amount of memory (in MB) allocated to each core node (24 GB)
-        //   },
-        // },
         {
           Classification: 'mapred-site',
           Properties: {
@@ -241,6 +235,13 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         KeepJobFlowAliveWhenNoSteps: true,
       },
       ScaleDownBehavior: ScaleDownBehavior.TERMINATE_AT_TASK_COMPLETION,
+      ManagedScalingPolicy: {
+        ComputeLimits: {
+          UnitType: ComputeLimitsUnitType.VCPU,
+          MinimumCapacityUnits: 24,
+          MaximumCapacityUnits: 400,
+        },
+      },
       Applications: [
         {
           Name: 'Hadoop',
