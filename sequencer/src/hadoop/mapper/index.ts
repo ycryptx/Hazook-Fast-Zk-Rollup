@@ -24,8 +24,7 @@ export const mapper = async (
       continue;
     }
 
-    const [, lineNumber, sequentialism, isIntermediate, data] = // the first \t separated field is a key set by nLineInputFormat
-      line.split('\t');
+    const [lineNumber, sequentialism, isIntermediate, data] = line.split('\t');
 
     if (!data) {
       continue;
