@@ -59,9 +59,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-            inputLocation,
-            proofs.length > 0 ? proofs.length : lineNumber,
-          ));
+          inputLocation,
+          proofs.length > 0 ? proofs.length : lineNumber,
+        ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -216,7 +216,31 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
             TargetSpotCapacity: 1,
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.xlarge', // Master instance type
+                InstanceType: 'm5.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm5d.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm5n.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm6a.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm6g.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm6i.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm7g.xlarge',
                 BidPrice: '0.5',
               },
             ],
@@ -226,7 +250,31 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
             TargetSpotCapacity: 3, // Number of core instances
             InstanceTypeConfigs: [
               {
-                InstanceType: 'm5.2xlarge', // Core instance type
+                InstanceType: 'm5.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm5d.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm5n.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm6a.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm6g.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm6i.xlarge',
+                BidPrice: '0.5',
+              },
+              {
+                InstanceType: 'm7g.xlarge',
                 BidPrice: '0.5',
               },
             ],
