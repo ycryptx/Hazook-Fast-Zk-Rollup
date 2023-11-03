@@ -224,10 +224,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
                 BidPrice: '0.5',
               },
               {
-                InstanceType: 'm5n.xlarge',
-                BidPrice: '0.5',
-              },
-              {
                 InstanceType: 'm6a.xlarge',
                 BidPrice: '0.5',
               },
@@ -237,10 +233,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               },
               {
                 InstanceType: 'm6i.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm7g.xlarge',
                 BidPrice: '0.5',
               },
             ],
@@ -258,10 +250,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
                 BidPrice: '0.5',
               },
               {
-                InstanceType: 'm5n.xlarge',
-                BidPrice: '0.5',
-              },
-              {
                 InstanceType: 'm6a.xlarge',
                 BidPrice: '0.5',
               },
@@ -271,10 +259,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               },
               {
                 InstanceType: 'm6i.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm7g.xlarge',
                 BidPrice: '0.5',
               },
             ],
