@@ -6,6 +6,7 @@ import { logger } from '../utils';
 type OrderedAccumulatedProof = {
   order: number;
   proof: RollupProofBase;
+  skipped?: boolean;
 };
 
 export const reducer = async (
@@ -28,14 +29,10 @@ export const reducer = async (
 
   for await (const line of rl) {
     const [_partitionKey, lineNumber, proofString] = line.split('\t');
+
     logger('reducer', `got proof ${lineNumber}, partition ${_partitionKey}`);
 
-    if (!intermediateProofs[_partitionKey]) {
-      intermediateProofs[_partitionKey] = {
-        proofs: [],
-      };
-    }
-
+    const _lineNumber = parseInt(lineNumber);
     if (!compiled) {
       logger('reducer', `compiling zkapp`);
       try {
@@ -51,29 +48,70 @@ export const reducer = async (
       partitionKey = _partitionKey;
     }
 
-    const intermediateProof = proof.fromJSON(JSON.parse(proofString));
-    intermediateProofs[_partitionKey].proofs.push({
-      proof: intermediateProof,
-      order: parseInt(lineNumber),
-    });
+    const deserializedProof = proof.fromJSON(JSON.parse(proofString));
+    const orderedProofToAdd = {
+      proof: deserializedProof,
+      order: _lineNumber,
+    };
+    if (!intermediateProofs[_partitionKey]) {
+      intermediateProofs[_partitionKey] = {
+        proofs: [orderedProofToAdd],
+      };
+      continue;
+    }
 
     // TODO: see if moving the proof generation from within the line reading
     // speeds up the reducer
+    let proofs = intermediateProofs[_partitionKey].proofs;
+
+    // push the proof to the array in-order
+    for (let i = 0; i < proofs.length; i++) {
+      if (i == proofs.length - 1) {
+        proofs.push(orderedProofToAdd);
+      }
+      if (proofs[i].order < _lineNumber) {
+        if (i == 0) {
+          proofs = [orderedProofToAdd].concat(proofs);
+        }
+        proofs = proofs
+          .slice(0, i - 1)
+          .concat([orderedProofToAdd])
+          .concat(proofs.slice(i - 1));
+      }
+    }
+
+    // try to merge consecutive proofs
+    let current = 0;
+    for (let i = 0; i < proofs.length - 1; i++) {
+      if (proofs[i].order == proofs[i + 1].order + 1) {
+        if (proofs[i].skipped) {
+          continue;
+        }
+        proofs[i + 1].proof = await proofs[current].proof.merge(
+          proofs[i + 1].proof,
+        );
+        proofs[i].skipped = true;
+        current = i + 1;
+      } else {
+        current += 1;
+      }
+    }
+
+    intermediateProofs[_partitionKey].proofs = proofs;
   }
 
   // proofs accumulated by partition
   const accumulatedProofs: OrderedAccumulatedProof[] = [];
 
   for (const partition of Object.keys(intermediateProofs)) {
-    intermediateProofs[partition].proofs = intermediateProofs[
-      partition
-    ].proofs.sort((entry1, entry2) => entry1.order - entry2.order);
-
     for (const orderedProof of intermediateProofs[partition].proofs) {
       logger(
         'reducer',
         `merging proof ${orderedProof.order} in partition ${partition}`,
       );
+      if (orderedProof.skipped) {
+        continue;
+      }
       try {
         if (!intermediateProofs[partition].accumulated) {
           intermediateProofs[partition].accumulated = orderedProof.proof;
