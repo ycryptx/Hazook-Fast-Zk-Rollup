@@ -272,6 +272,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
           UnitType: ComputeLimitsUnitType.InstanceFleetUnits,
           MinimumCapacityUnits: 3,
           MaximumCapacityUnits: 100,
+          MaximumOnDemandCapacityUnits: 0,
         },
       },
       Applications: [
