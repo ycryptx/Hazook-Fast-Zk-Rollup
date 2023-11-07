@@ -59,9 +59,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-            inputLocation,
-            proofs.length > 0 ? proofs.length : lineNumber,
-          ));
+          inputLocation,
+          proofs.length > 0 ? proofs.length : lineNumber,
+        ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -269,9 +269,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       ScaleDownBehavior: ScaleDownBehavior.TERMINATE_AT_TASK_COMPLETION,
       ManagedScalingPolicy: {
         ComputeLimits: {
-          UnitType: ComputeLimitsUnitType.VCPU,
-          MinimumCapacityUnits: 24,
-          MaximumCapacityUnits: 400,
+          UnitType: ComputeLimitsUnitType.InstanceFleetUnits,
+          MinimumCapacityUnits: 3,
+          MaximumCapacityUnits: 100,
         },
       },
       Applications: [
