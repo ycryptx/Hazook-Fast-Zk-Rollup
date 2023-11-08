@@ -3,21 +3,29 @@ import * as fs from 'fs';
 import {
   EMRClient,
   RunJobFlowCommand,
+  ModifyInstanceFleetCommand,
   waitUntilClusterRunning,
   waitUntilStepComplete,
   AddJobFlowStepsCommand,
   ListClustersCommand,
   ClusterState,
   ScaleDownBehavior,
-  ComputeLimitsUnitType,
+  InstanceFleet,
+  ListInstanceFleetsCommand,
 } from '@aws-sdk/client-emr';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
 import { Uploader } from '../uploader';
 import { runShellCommand, preProcessRawTransactions } from '../utils';
 import { RollupProofBase } from '@ycryptx/rollup';
-
-const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
+import {
+  YARN_CONTAINER_MEMORY,
+  MAX_MAP_REDUCE_WAIT_TIME,
+  TASK_NODE_FLEET_NAME,
+  TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
+  PROOFS_PER_TASK_NODE,
+  INSTANCE_TYPES,
+} from '../constants';
 
 export class MapReduceClient<RollupProof extends RollupProofBase> {
   private mode: Mode;
@@ -44,7 +52,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
    * @returns the result of the MapReduce
    */
   async process(inputFile: string): Promise<RollupProof> {
-    const sequentialism = 4; // each parallel process should not compute more than 4 proofs if there are enough cores
+    const sequentialism = 2; // each parallel reducer should not compute more than 2 proofs if there are enough cores
     const { preprocessedFile, lineNumber } = await preProcessRawTransactions(
       inputFile,
     );
@@ -106,7 +114,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
   private async processEmr(
     inputFile: string,
-    lineNumber: number,
+    numberOfProofs: number,
   ): Promise<RollupProof[]> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
@@ -120,13 +128,17 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       }),
     );
 
-    let clusterId: string;
+    let clusterId: string, taskFleetDetails: InstanceFleet;
 
     if (clusters.Clusters.length == 0) {
       // no cluster available so initialize it
-      clusterId = await this.initCluster();
+      const { clusterId: _clusterId, taskFleetDetails: _taskFleetDetails } =
+        await this.initCluster();
+      clusterId = _clusterId;
+      taskFleetDetails = _taskFleetDetails;
     } else {
       clusterId = clusters.Clusters[0].Id;
+      taskFleetDetails = await this.getRunningTaskFleetDetails(clusterId);
     }
 
     const outputDir = `output-${randString.generate(7)}`;
@@ -156,6 +168,13 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       ],
     });
 
+    await this.autoScale({
+      clusterId,
+      instanceFleetId: taskFleetDetails.Id,
+      targetTaskNodes:
+        Math.round(numberOfProofs / 2 / PROOFS_PER_TASK_NODE) + 1,
+    });
+
     const start = Date.now();
 
     const data = await this.emrClient.send(command);
@@ -168,6 +187,12 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       },
     );
 
+    await this.autoScale({
+      clusterId,
+      instanceFleetId: taskFleetDetails.Id,
+      targetTaskNodes: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
+    });
+
     const result = await this.uploader.getEMROutput(outputDir);
 
     const end = Date.now();
@@ -175,8 +200,35 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
     return result;
   }
+  async autoScale(args: {
+    clusterId: string;
+    instanceFleetId: string;
+    targetTaskNodes: number;
+  }): Promise<void> {
+    const { clusterId, instanceFleetId, targetTaskNodes } = args;
+    const command = new ModifyInstanceFleetCommand({
+      ClusterId: clusterId,
+      InstanceFleet: {
+        InstanceFleetId: instanceFleetId,
+        TargetSpotCapacity: targetTaskNodes,
+      },
+    });
+    console.log(`EMR: autoscaling cluster to ${targetTaskNodes} nodes`);
 
-  async initCluster(): Promise<string> {
+    try {
+      await this.emrClient.send(command);
+      console.log(`EMR: autoscaling in progress...`);
+      return;
+    } catch (err) {
+      console.error('Error autoscaling EMR cluster:', err);
+      throw err;
+    }
+  }
+
+  async initCluster(): Promise<{
+    clusterId: string;
+    taskFleetDetails: InstanceFleet;
+  }> {
     const command = new RunJobFlowCommand({
       Name: 'accumulator',
       LogUri: `s3://${process.env.BUCKET_PREFIX}-emr-data`,
@@ -197,8 +249,8 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
           Properties: {
             'mapreduce.map.cpu.vcores': '1',
             'mapreduce.reduce.cpu.vcores': '1',
-            'mapreduce.map.memory.mb': '5120',
-            'mapreduce.reduce.memory.mb': '5120',
+            'mapreduce.map.memory.mb': `${YARN_CONTAINER_MEMORY}`,
+            'mapreduce.reduce.memory.mb': `${YARN_CONTAINER_MEMORY}`,
             'mapreduce.task.timeout': '0',
             'mapreduce.task.stuck.timeout-ms': '0',
             'mapreduce.map.speculative': 'false',
@@ -213,68 +265,24 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         InstanceFleets: [
           {
             InstanceFleetType: 'MASTER',
-            TargetSpotCapacity: 1,
-            InstanceTypeConfigs: [
-              {
-                InstanceType: 'm5.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm5d.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm6a.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm6g.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm6i.xlarge',
-                BidPrice: '0.5',
-              },
-            ],
+            TargetOnDemandCapacity: 1,
+            InstanceTypeConfigs: INSTANCE_TYPES,
           },
           {
             InstanceFleetType: 'CORE',
-            TargetSpotCapacity: 3, // Number of core instances
-            InstanceTypeConfigs: [
-              {
-                InstanceType: 'm5.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm5d.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm6a.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm6g.xlarge',
-                BidPrice: '0.5',
-              },
-              {
-                InstanceType: 'm6i.xlarge',
-                BidPrice: '0.5',
-              },
-            ],
+            TargetOnDemandCapacity: 1, // Number of core instances
+            InstanceTypeConfigs: INSTANCE_TYPES,
+          },
+          {
+            Name: TASK_NODE_FLEET_NAME,
+            InstanceFleetType: 'TASK',
+            TargetSpotCapacity: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY, // Number of task instances
+            InstanceTypeConfigs: INSTANCE_TYPES,
           },
         ],
         KeepJobFlowAliveWhenNoSteps: true,
       },
       ScaleDownBehavior: ScaleDownBehavior.TERMINATE_AT_TASK_COMPLETION,
-      ManagedScalingPolicy: {
-        ComputeLimits: {
-          UnitType: ComputeLimitsUnitType.InstanceFleetUnits,
-          MinimumCapacityUnits: 3,
-          MaximumCapacityUnits: 100,
-          MaximumOnDemandCapacityUnits: 0,
-        },
-      },
       Applications: [
         {
           Name: 'Hadoop',
@@ -288,11 +296,24 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
       // Wait for the EMR job to complete
       await this.waitForClusterRunning(JobFlowId);
-      return JobFlowId;
+
+      const taskFleetDetails = await this.getRunningTaskFleetDetails(JobFlowId);
+      return { clusterId: JobFlowId, taskFleetDetails };
     } catch (err) {
       console.error('Error initializing EMR cluster:', err);
       throw err;
     }
+  }
+
+  public async getRunningTaskFleetDetails(
+    clusterId: string,
+  ): Promise<InstanceFleet> {
+    const InstanceFleets = await this.emrClient.send(
+      new ListInstanceFleetsCommand({ ClusterId: clusterId }),
+    );
+    return InstanceFleets.InstanceFleets.find(
+      (fleet) => fleet.Name == TASK_NODE_FLEET_NAME,
+    );
   }
 
   private async waitForClusterRunning(jobFlowId): Promise<void> {

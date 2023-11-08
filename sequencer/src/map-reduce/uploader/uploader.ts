@@ -49,11 +49,16 @@ export class Uploader<RollupProof extends RollupProofBase> {
     const splitHadoopResults = hadoopResults
       .split('\t\n')
       .filter((res) => res != '');
-    const serializedHadoopResults = splitHadoopResults.map((proofString) =>
+    const desetializedArraysOfProofs = splitHadoopResults.map((proofString) =>
       JSON.parse(proofString),
     );
 
-    const sortedProofs: RollupProof[] = serializedHadoopResults
+    const deserializedProofsArray = [];
+    for (const proofArray of desetializedArraysOfProofs) {
+      deserializedProofsArray.push(...proofArray);
+    }
+
+    const sortedProofs: RollupProof[] = deserializedProofsArray
       .sort((res1, res2) => res1.order - res2.order)
       .map(
         (res) => MyRollupProof.fromJSON(res.proof) as unknown as RollupProof,
@@ -79,11 +84,17 @@ export class Uploader<RollupProof extends RollupProofBase> {
     for (const response of responses) {
       results.push(response.Body.transformToString());
     }
-    const serializedProofs = (await Promise.all(results))
-      .filter((proof) => proof.trim() != '')
-      .map((proof) => JSON.parse(proof.trim()));
 
-    const sortedProofs: RollupProof[] = serializedProofs
+    const desetializedArraysOfProofs = (await Promise.all(results))
+      .filter((proofs) => proofs.trim() != '')
+      .map((proofs) => JSON.parse(proofs.trim()));
+
+    const deserializedProofsArray = [];
+    for (const proofArray of desetializedArraysOfProofs) {
+      deserializedProofsArray.push(...proofArray);
+    }
+
+    const sortedProofs: RollupProof[] = deserializedProofsArray
       .sort((res1, res2) => parseInt(res1.order) - parseInt(res2.order))
       .map(
         (res) => MyRollupProof.fromJSON(res.proof) as unknown as RollupProof,

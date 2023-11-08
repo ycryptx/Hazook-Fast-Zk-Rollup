@@ -2,8 +2,7 @@ import { createInterface } from 'readline';
 import { RollupBase, RollupProofBase } from '@ycryptx/rollup';
 import { logger } from '../utils';
 
-// TODO: move this to a shared types file
-type OrderedAccumulatedProof = {
+export type OrderedAccumulatedProof = {
   order: number;
   proof: RollupProofBase;
   skipped?: boolean;
@@ -81,9 +80,14 @@ export const reducer = async (
         if (proofs[i].skipped) {
           continue;
         }
+        logger(
+          'reducer',
+          `merging proof ${proofs[i].order} while mapper is still feeding proofs`,
+        );
         proofs[i + 1].proof = await proofs[current].proof.merge(
           proofs[i + 1].proof,
         );
+        logger('reducer', `finished merging proof ${proofs[i].order}`);
         proofs[i].skipped = true;
         current = i + 1;
       } else {
@@ -129,11 +133,7 @@ export const reducer = async (
     });
   }
 
-  let result = '';
-  for (const accumulatedProof of accumulatedProofs) {
-    result += `${JSON.stringify(accumulatedProof)}\n`;
-  }
-  process.stdout.write(result);
+  process.stdout.write(JSON.stringify(accumulatedProofs));
   logger(
     'reducer',
     `done: partitions ${accumulatedProofs.map((p) => p.order)}`,
