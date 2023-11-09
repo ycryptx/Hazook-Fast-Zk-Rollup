@@ -20,6 +20,12 @@ export const TASK_NODE_FLEET_IDLE_TARGET_CAPACITY = 1;
  */
 export const PROOFS_PER_TASK_NODE = 3;
 /**
+ * Each parallel Hadoop container running the reduce step
+ * should not compute more than 2 proofs if there are enough cores
+ */
+export const REDUCER_SEQUENTIALISM = 2;
+
+/**
  * The instance types the Hadoop cluster can use when it provisions / autoscales itself.
  * For now we only support instances of different families but similar size.
  */

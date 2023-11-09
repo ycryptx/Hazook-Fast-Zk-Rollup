@@ -25,6 +25,7 @@ import {
   TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
   PROOFS_PER_TASK_NODE,
   INSTANCE_TYPES,
+  REDUCER_SEQUENTIALISM
 } from '../constants';
 
 export class MapReduceClient<RollupProof extends RollupProofBase> {
@@ -52,7 +53,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
    * @returns the result of the MapReduce
    */
   async process(inputFile: string): Promise<RollupProof> {
-    const sequentialism = 2; // each parallel reducer should not compute more than 2 proofs if there are enough cores
     const { preprocessedFile, lineNumber } = await preProcessRawTransactions(
       inputFile,
     );
@@ -67,9 +67,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-            inputLocation,
-            proofs.length > 0 ? proofs.length : lineNumber,
-          ));
+          inputLocation,
+          proofs.length > 0 ? proofs.length : lineNumber,
+        ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -82,7 +82,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       for (let i = 0; i < proofs.length; i++) {
         fs.appendFileSync(
           absPathInputFile,
-          `${i}\t${sequentialism}\t${'1'}\t${JSON.stringify(
+          `${i}\t${REDUCER_SEQUENTIALISM}\t${'1'}\t${JSON.stringify(
             proofs[i].toJSON(),
           )}\n`,
         );
@@ -172,7 +172,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       clusterId,
       instanceFleetId: taskFleetDetails.Id,
       targetSpotNodes:
-        Math.round(numberOfProofs / 2 / PROOFS_PER_TASK_NODE) + 1,
+        Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
     });
 
     const start = Date.now();
