@@ -465,6 +465,7 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
       "elasticmapreduce:Get*",
       "elasticmapreduce:List*",
       "elasticmapreduce:RunJobFlow",
+      "elasticmapreduce:ModifyInstanceFleet",
       "elasticmapreduce:TerminateJobFlows",
       // TODO: here to help ycryptx debug stuff, toremove
       "ec2:Describe*"
