@@ -43,7 +43,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "cross-env": "^7.0.3",
-    "o1js": "^0.13.1",
+    "o1js": "^0.14.1",
     "tslib": "~2.5"
   }
 }

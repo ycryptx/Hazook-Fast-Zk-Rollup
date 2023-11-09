@@ -11,7 +11,7 @@
 
 import {
   Field,
-  Experimental,
+  ZkProgram,
   SelfProof,
   Struct,
   Empty,
@@ -76,7 +76,8 @@ class RollupState extends Struct({
 /**
  * Our dummy ZkApp; you should replace it with your own ZkApp.
  */
-export const Rollup = Experimental.ZkProgram({
+export const Rollup = ZkProgram({
+  name: 'DummyZkAppRollup',
   publicInput: RollupState,
 
   methods: {
@@ -139,7 +140,7 @@ export const Rollup = Experimental.ZkProgram({
  * An implementation of {@link RollupProofBase}
  */
 export class MyRollupProof
-  extends Experimental.ZkProgram.Proof(Rollup)
+  extends ZkProgram.Proof(Rollup)
   implements RollupProofBase
 {
   public async merge(newProof: MyRollupProof): Promise<MyRollupProof> {

@@ -15,6 +15,6 @@ export NODE_PATH=$(npm root --quiet -g)
 
 ls $NODE_PATH
 
-npm i -g o1js@^0.13.1
+npm i -g o1js@^0.14.1
 
 ls $NODE_PATH

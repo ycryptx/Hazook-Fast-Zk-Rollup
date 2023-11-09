@@ -65,7 +65,7 @@ RUN sudo apt-get update; \
     sudo apt-get install nodejs -y
 
 # Install o1js as a global npm package
-RUN sudo npm i -g o1js@^0.13.1
+RUN sudo npm i -g o1js@^0.14.1
 
 ENV NODE_PATH /usr/lib/node_modules
 
