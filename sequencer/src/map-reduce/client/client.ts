@@ -171,7 +171,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     await this.autoScale({
       clusterId,
       instanceFleetId: taskFleetDetails.Id,
-      targetTaskNodes:
+      targetSpotNodes:
         Math.round(numberOfProofs / 2 / PROOFS_PER_TASK_NODE) + 1,
     });
 
@@ -190,7 +190,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     await this.autoScale({
       clusterId,
       instanceFleetId: taskFleetDetails.Id,
-      targetTaskNodes: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
+      targetSpotNodes: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
     });
 
     const result = await this.uploader.getEMROutput(outputDir);
@@ -200,20 +200,22 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
     return result;
   }
+
   async autoScale(args: {
     clusterId: string;
     instanceFleetId: string;
-    targetTaskNodes: number;
+    targetSpotNodes: number;
   }): Promise<void> {
-    const { clusterId, instanceFleetId, targetTaskNodes } = args;
+    const { clusterId, instanceFleetId, targetSpotNodes } = args;
     const command = new ModifyInstanceFleetCommand({
       ClusterId: clusterId,
       InstanceFleet: {
         InstanceFleetId: instanceFleetId,
-        TargetSpotCapacity: targetTaskNodes,
+        TargetSpotCapacity: targetSpotNodes,
+        TargetOnDemandCapacity: 0,
       },
     });
-    console.log(`EMR: autoscaling cluster to ${targetTaskNodes} nodes`);
+    console.log(`EMR: autoscaling cluster to ${targetSpotNodes} spot nodes`);
 
     try {
       await this.emrClient.send(command);
