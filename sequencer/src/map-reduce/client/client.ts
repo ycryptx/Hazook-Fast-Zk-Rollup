@@ -25,7 +25,7 @@ import {
   TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
   PROOFS_PER_TASK_NODE,
   INSTANCE_TYPES,
-  REDUCER_SEQUENTIALISM
+  REDUCER_SEQUENTIALISM,
 } from '../constants';
 
 export class MapReduceClient<RollupProof extends RollupProofBase> {
@@ -67,9 +67,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-          inputLocation,
-          proofs.length > 0 ? proofs.length : lineNumber,
-        ));
+            inputLocation,
+            proofs.length > 0 ? proofs.length : lineNumber,
+          ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -171,8 +171,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     await this.autoScale({
       clusterId,
       instanceFleetId: taskFleetDetails.Id,
-      targetSpotNodes:
-        Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
+      targetSpotNodes: Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
     });
 
     const start = Date.now();
