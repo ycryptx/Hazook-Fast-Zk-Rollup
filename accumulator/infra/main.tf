@@ -284,17 +284,17 @@ resource "aws_security_group" "sequencer" {
 }
 
 resource "aws_security_group" "emr_dev" {
-  vpc_id = "${aws_vpc.main.id}"
+  vpc_id = aws_vpc.main.id
   ingress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
-    cidr_blocks = [ aws_subnet.private_1.cidr_block ]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [aws_subnet.private_1.cidr_block]
   }
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = -1
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
@@ -375,51 +375,55 @@ resource "aws_iam_instance_profile" "emr_ec2" {
   role = aws_iam_role.iam_emr_ec2.name
 }
 
-resource "aws_emr_cluster" "accumulator" {
-  name          = "accumulator"
-  release_label = "emr-6.11.0"
-  applications  = ["Hadoop"]
-  service_role  = "EMR_DefaultRole"
-  ec2_attributes {
-    # TODO: WARNING: remove the machines from the public_1 subnet
-    # before deploying this system to production!!!!!!!
-    # We opened the floodgates to simplify the dev workflow.
-    subnet_id                         = aws_subnet.public_1.id
-    additional_master_security_groups = aws_security_group.emr_master.id
-    additional_slave_security_groups  = aws_security_group.emr_core.id
-    instance_profile                  = aws_iam_instance_profile.emr_ec2.name
-    key_name = aws_key_pair.ycryptx.key_name
-  }
+// TODO: figure out if we want to add EMR provisioning from terraform,
+// as currently it is being done via-code by the sequencer. Also, note that
+// the configuration below is different: it uses instance groups, not instance fleets,
+// no instance type diversity, etc.
+# resource "aws_emr_cluster" "accumulator" {
+#   name          = "accumulator"
+#   release_label = "emr-6.11.0"
+#   applications  = ["Hadoop"]
+#   service_role  = "EMR_DefaultRole"
+#   ec2_attributes {
+#     # TODO: WARNING: remove the machines from the public_1 subnet
+#     # before deploying this system to production!!!!!!!
+#     # We opened the floodgates to simplify the dev workflow.
+#     subnet_id                         = aws_subnet.public_1.id
+#     additional_master_security_groups = aws_security_group.emr_master.id
+#     additional_slave_security_groups  = aws_security_group.emr_core.id
+#     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
+#     key_name = aws_key_pair.ycryptx.key_name
+#   }
 
-  log_uri = "s3://${aws_s3_bucket.emr_data.id}"
+#   log_uri = "s3://${aws_s3_bucket.emr_data.id}"
 
-  master_instance_group {
-    instance_count = 1
-    instance_type  = "m5a.2xlarge"
-    # The spot market for this instance has been stable and under .15 for
-    # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
-    # Note: we probably want a non-spot master node in production.
-    bid_price = 0.5
-  }
+#   master_instance_group {
+#     instance_count = 1
+#     instance_type  = "m5a.2xlarge"
+#     # The spot market for this instance has been stable and under .15 for
+#     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
+#     # Note: we probably want a non-spot master node in production.
+#     bid_price = 0.5
+#   }
 
-  core_instance_group {
-    instance_count = 1
-    instance_type  = "m5a.2xlarge"
-    # The spot market for this instance has been stable and under .15 for
-    # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
-    bid_price = 0.5
-  }
+#   core_instance_group {
+#     instance_count = 1
+#     instance_type  = "m5a.2xlarge"
+#     # The spot market for this instance has been stable and under .15 for
+#     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
+#     bid_price = 0.5
+#   }
 
-  bootstrap_action {
-    path = "s3://${aws_s3_bucket.emr_data.id}/emr_bootstrap_script.sh"
-    name = "emr_bootstrap_script.semr_bootstrap_script.sh"
-  }
+#   bootstrap_action {
+#     path = "s3://${aws_s3_bucket.emr_data.id}/emr_bootstrap_script.sh"
+#     name = "emr_bootstrap_script.semr_bootstrap_script.sh"
+#   }
 
-  tags = {
-    for-use-with-amazon-emr-managed-policies = true
-    project                                  = "mina"
-  }
-}
+#   tags = {
+#     for-use-with-amazon-emr-managed-policies = true
+#     project                                  = "mina"
+#   }
+# }
 
 
 # Sequencer EC2 Setup
@@ -502,19 +506,19 @@ resource "aws_eip" "sequencer-eip" {
 }
 
 resource "aws_key_pair" "ycryptx" {
-  key_name = "ycryptx"
+  key_name   = "ycryptx"
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz7QlDRx7Vvra3XCfB4bWwFSxEgw81DHgeNrFTR5dxT/J29MfZhW+rjJXR4mVAvUGEBlNsGJ6EwBt65FqWxuWTGARoW2jBVMxqwqxldYLKHWcWTv8IdaYAQniKwfOX/3NaaQEw93HwHbb8aYjbBudR/UtwOgT0vDpuxUzPwIDRxea3Za64qV0H7s6PnfbC5DcC9fOX72fiGXuwMaZAUN8dIgI9mZcEn3yaWfwqYQ+Qcx6pDEWG73YLXJfoZ7UtSp+GF6lgOcTc7pw+NIoUcU/Pq+I0d7ECIEaRXv97U2R8lbgBRkR7NIBjxqSKHb3m5wfDvLQGrrn2Mg7zmGa8buyfeNaBfolEfa+c8R2fS8smvd7El3K/ogMeRJ3j5actRIP74UKqrgQd6nTJDkxD4F09bDHcke+PLlLkyURnatcRGH3J56sVTXRM5mRGuoFufBz8s6K+jS2Fmxirf97fJ61gq/M7w4LEDDX2gncrNeX+QmqGeWXV5wBFkvS2lxYGl88="
 }
 
 resource "aws_key_pair" "sequencer" {
-  key_name = "sequencer"
+  key_name   = "sequencer"
   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6tWZZkHYJJtD7G+hiOc8ICbNrDngrLtE/jst67wERX"
 }
 
 resource "aws_network_interface" "priv-sequencer" {
   subnet_id = aws_subnet.private_1.id
   attachment {
-    instance = aws_instance.sequencer.id
+    instance     = aws_instance.sequencer.id
     device_index = 2
   }
 }
