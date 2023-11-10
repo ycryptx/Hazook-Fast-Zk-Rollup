@@ -34,13 +34,14 @@ export const reducer = async (
     const _lineNumber = parseInt(lineNumber);
     if (!compiled) {
       logger('reducer', `compiling zkapp`);
+      const start = Date.now();
       try {
         await rollup.compile({ cache: compilationCache });
       } catch (err) {
         logger('reducer', `failed compiling zkapp`);
         throw err;
       }
-      logger('reducer', `finished compiling zkapp`);
+      logger('reducer', `finished compiling, took ${Date.now() - start}ms`);
       compiled = true;
     }
     if (!partitionKey) {

@@ -41,13 +41,14 @@ export const mapper = async (
 
     if (!compiled) {
       logger('mapper', `compiling zkapp`);
+      const start = Date.now();
       try {
         await rollup.compile({ cache: compilationCache });
       } catch (err) {
         logger('mapper', `failed to compile zkapp ${err}`);
         throw err;
       }
-      logger('mapper', `finished compiling`);
+      logger('mapper', `finished compiling, took ${Date.now() - start}ms`);
       compiled = true;
     }
 

@@ -343,6 +343,7 @@ const mapper = async (rollup, tx, proof) => {
         }
         if (!compiled) {
             (0, utils_1.logger)('mapper', `compiling zkapp`);
+            const start = Date.now();
             try {
                 await rollup.compile({ cache: utils_1.compilationCache });
             }
@@ -350,7 +351,7 @@ const mapper = async (rollup, tx, proof) => {
                 (0, utils_1.logger)('mapper', `failed to compile zkapp ${err}`);
                 throw err;
             }
-            (0, utils_1.logger)('mapper', `finished compiling`);
+            (0, utils_1.logger)('mapper', `finished compiling, took ${Date.now() - start}ms`);
             compiled = true;
         }
         tx.deserialize(data);

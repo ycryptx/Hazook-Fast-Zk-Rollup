@@ -330,6 +330,7 @@ const reducer = async (rollup, proof) => {
         const _lineNumber = parseInt(lineNumber);
         if (!compiled) {
             (0, utils_1.logger)('reducer', `compiling zkapp`);
+            const start = Date.now();
             try {
                 await rollup.compile({ cache: utils_1.compilationCache });
             }
@@ -337,7 +338,7 @@ const reducer = async (rollup, proof) => {
                 (0, utils_1.logger)('reducer', `failed compiling zkapp`);
                 throw err;
             }
-            (0, utils_1.logger)('reducer', `finished compiling zkapp`);
+            (0, utils_1.logger)('reducer', `finished compiling, took ${Date.now() - start}ms`);
             compiled = true;
         }
         if (!partitionKey) {
