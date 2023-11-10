@@ -11,10 +11,66 @@ module.exports = require("o1js");
 
 /***/ }),
 
+/***/ 17:
+/***/ ((module) => {
+
+module.exports = require("path");
+
+/***/ }),
+
 /***/ 521:
 /***/ ((module) => {
 
 module.exports = require("readline");
+
+/***/ }),
+
+/***/ 814:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.compile = void 0;
+const path = __importStar(__webpack_require__(17));
+const o1js_1 = __webpack_require__(136);
+const compilationCache = o1js_1.Cache.FileSystem(path.join(__dirname, '..', 'compilation'));
+/**
+ *
+ * @param rollup
+ * @returns
+ */
+const compile = async (rollup) => {
+    console.log('compiling zkapp...');
+    const start = Date.now();
+    await rollup.compile({ cache: compilationCache });
+    console.log('Finished compiling zkapp!', Date.now() - start);
+    return;
+};
+exports.compile = compile;
+//# sourceMappingURL=compilation.js.map
 
 /***/ }),
 
@@ -75,6 +131,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 __exportStar(__webpack_require__(356), exports);
 __exportStar(__webpack_require__(747), exports);
+__exportStar(__webpack_require__(814), exports);
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -128,7 +185,8 @@ class RollupState extends (0, o1js_1.Struct)({
 /**
  * Our dummy ZkApp; you should replace it with your own ZkApp.
  */
-exports.Rollup = o1js_1.Experimental.ZkProgram({
+exports.Rollup = (0, o1js_1.ZkProgram)({
+    name: 'DummyZkAppRollup',
     publicInput: RollupState,
     methods: {
         oneStep: {
@@ -154,7 +212,7 @@ exports.Rollup = o1js_1.Experimental.ZkProgram({
 /**
  * An implementation of {@link RollupProofBase}
  */
-class MyRollupProof extends o1js_1.Experimental.ZkProgram.Proof(exports.Rollup) {
+class MyRollupProof extends o1js_1.ZkProgram.Proof(exports.Rollup) {
     async merge(newProof) {
         const currentState = new RollupState({
             initialRoot: this.publicInput.initialRoot,
@@ -286,7 +344,7 @@ const mapper = async (rollup, tx, proof) => {
         if (!compiled) {
             (0, utils_1.logger)('mapper', `compiling zkapp`);
             try {
-                await rollup.compile();
+                await rollup.compile({ cache: utils_1.compilationCache });
             }
             catch (err) {
                 (0, utils_1.logger)('mapper', `failed to compile zkapp ${err}`);
@@ -316,15 +374,18 @@ exports.mapper = mapper;
 /***/ }),
 
 /***/ 587:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.logger = void 0;
+exports.compilationCache = exports.logger = exports.COMPILATION_CACHE_PATH = void 0;
+const o1js_1 = __webpack_require__(136);
+exports.COMPILATION_CACHE_PATH = `s3://${"mina-fast-zk-rollup-emr-data"}/compilation`;
 const logger = (instance, msg) => {
     console.error(`${new Date().toISOString()} ${instance}: ${msg}`);
 };
 exports.logger = logger;
+exports.compilationCache = o1js_1.Cache.FileSystem(exports.COMPILATION_CACHE_PATH);
 //# sourceMappingURL=index.js.map
 
 /***/ })
