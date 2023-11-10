@@ -1,4 +1,6 @@
 /* eslint-disable jest/no-disabled-tests */
+import * as path from 'path';
+import { Cache } from 'o1js';
 
 import {
   Rollup,
@@ -7,6 +9,8 @@ import {
   TransactionPreProcessor,
   MyTransaction,
 } from '../src';
+
+const compilationCache: Cache = Cache.FileSystem(path.join(__dirname, 'cache'));
 
 const txs = [0, 1, 2, 3, 4, 5, 6, 7];
 
@@ -34,7 +38,7 @@ describe('rollup', () => {
   beforeAll(async () => {
     console.log('compiling zk program...');
     const start = Date.now();
-    const compiled = await Rollup.compile();
+    const compiled = await Rollup.compile({ cache: compilationCache });
     console.log('finished compiling!', Date.now() - start);
     verificationKey = compiled.verificationKey;
     console.log('verificationKey', verificationKey);

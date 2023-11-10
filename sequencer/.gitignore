@@ -31,3 +31,5 @@ build/
 .env
 
 preprocessed/run*
+
+compilation

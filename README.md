@@ -5,7 +5,7 @@ Take your Mina (ZkApp) Rollup to the next level by using cloud compute to parall
 ## Usage
 You may bring your own ZkApp Rollup implemented in any way you see fit. However, you must implement a few classes that follow the abstractions [defined here](rollup/src/generics.ts). Currently the project runs a dummy ZkApp Rollup ([reference](rollup/src/myRollup.ts)) that you can use as your reference implementation. 
 
-After implementing [these](rollup/src/generics.ts) abstractions, make sure to use them in the sequencer by updating [mapper.ts](sequencer/src/mapper.ts), [reducer.ts](sequencer/src/reducer.ts) and [sequencer.ts](sequencer/src/sequencer.ts).
+After implementing [these](rollup/src/generics.ts) abstractions, make sure to use them in the sequencer by updating [mapper.ts](sequencer/src/mapper.ts), [reducer.ts](sequencer/src/reducer.ts) [compiler.ts](sequencer/src/compiler.ts) and [sequencer.ts](sequencer/src/sequencer.ts).
 
 ## [Deployment](./accumulator/infra/README.md)
 TODO:  missing a general overview including explanation about deployment of the sequencer, the hadoop cluster, and instructions about terraform

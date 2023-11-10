@@ -1,6 +1,6 @@
 import { createInterface } from 'readline';
 import { TransactionBase, RollupProofBase, RollupBase } from '@ycryptx/rollup';
-import { logger } from '../utils';
+import { logger, compilationCache } from '../utils';
 
 export const mapper = async (
   rollup: RollupBase,
@@ -42,7 +42,7 @@ export const mapper = async (
     if (!compiled) {
       logger('mapper', `compiling zkapp`);
       try {
-        await rollup.compile();
+        await rollup.compile({ cache: compilationCache });
       } catch (err) {
         logger('mapper', `failed to compile zkapp ${err}`);
         throw err;

@@ -1,6 +1,6 @@
 import { createInterface } from 'readline';
 import { RollupBase, RollupProofBase } from '@ycryptx/rollup';
-import { logger } from '../utils';
+import { logger, compilationCache } from '../utils';
 
 export type OrderedAccumulatedProof = {
   order: number;
@@ -35,7 +35,7 @@ export const reducer = async (
     if (!compiled) {
       logger('reducer', `compiling zkapp`);
       try {
-        await rollup.compile();
+        await rollup.compile({ cache: compilationCache });
       } catch (err) {
         logger('reducer', `failed compiling zkapp`);
         throw err;

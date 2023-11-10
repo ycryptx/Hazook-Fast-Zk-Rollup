@@ -34,6 +34,7 @@
   "scripts": {
     "start": "node bundle/bundle.js",
     "clean": "rimraf coverage build bundle",
+    "compile:zkapp": "tsc -p tsconfig.json && webpack --config webpack.config.compiler.js && node ./bundle/compiler.js",
     "prebuild": "npm run lint",
     "build": "npm run clean && npm run build:protobuf && tsc -p tsconfig.json && webpack",
     "build:scripts": "tsc -p tsconfig.json && webpack --config webpack.config.mapper.js && webpack --config webpack.config.reducer.js",
