@@ -1,4 +1,4 @@
-import { Proof } from 'o1js';
+import { Proof, Cache } from 'o1js';
 import { MyRollupProof, Rollup, MyTransaction } from './myRollup';
 
 /**
@@ -47,7 +47,7 @@ export abstract class RollupProofBase {
  * For an example implementation of a ZkApp refer to {@link Rollup} in [myRollup.ts](./myRollup.ts).
  */
 export interface RollupBase {
-  compile: () => Promise<any>;
+  compile: (options?: { cache: Cache }) => Promise<any>;
 }
 
 /**
