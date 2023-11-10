@@ -16,6 +16,18 @@ jobs:
       LOCAL_HADOOP_IMAGE_NAME: ycryptx/mina:hadoop
     steps:
       - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+         filters: |
+           rollup:
+             - 'rollup/src/**'
+      - name: echo
+        if: steps.changes.outputs.rollup == 'true'
+        run: echo "found"
+      - name: echo
+        if: steps.changes.outputs.rollup == 'false'
+        run: echo "NOT FOUND"
       - name: Use Node.js
         uses: actions/setup-node@v2.2.0
         with:

@@ -16,3 +16,6 @@ export const compile = async <Rollup extends RollupBase>(
   console.log('Finished compiling zkapp!', Date.now() - start);
   return;
 };
+
+
+//HAHAHAHAAH
