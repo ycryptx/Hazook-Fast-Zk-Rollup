@@ -67,9 +67,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-          inputLocation,
-          proofs.length > 0 ? proofs.length : lineNumber,
-        ));
+            inputLocation,
+            proofs.length > 0 ? proofs.length : lineNumber,
+          ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -195,8 +195,8 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
       return result;
     } catch (err) {
-      console.log('EMR processing error', err)
-      throw err
+      console.log('EMR processing error', err);
+      throw err;
     } finally {
       // scale down
       await this.autoScale({
