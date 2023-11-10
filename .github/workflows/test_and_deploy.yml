@@ -74,6 +74,11 @@ jobs:
             aws s3 cp ./sequencer/scripts/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
             aws s3 cp ./sequencer/scripts/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
             aws s3 cp ./accumulator/infra/emr_bootstrap_script.sh s3://${{ env.DATA_BUCKET_NAME }}/emr_bootstrap_script.sh
+        env:
+          DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
       - name: Push contract compilation cache to S3 (only if changes were made in rollup/src/*)
         if: steps.changes.outputs.rollup == 'true'
         run: |
