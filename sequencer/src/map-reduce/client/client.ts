@@ -67,9 +67,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       proofs = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputLocation)
         : this.processEmr(
-            inputLocation,
-            proofs.length > 0 ? proofs.length : lineNumber,
-          ));
+          inputLocation,
+          proofs.length > 0 ? proofs.length : lineNumber,
+        ));
 
       console.log(`map reduce down to ${proofs.length} proofs`);
 
@@ -168,36 +168,43 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       ],
     });
 
-    await this.autoScale({
-      clusterId,
-      instanceFleetId: taskFleetDetails.Id,
-      targetSpotNodes: Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
-    });
+    try {
+      // scale up / down depending on the input size
+      await this.autoScale({
+        clusterId,
+        instanceFleetId: taskFleetDetails.Id,
+        targetSpotNodes: Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
+      });
 
-    const start = Date.now();
+      const start = Date.now();
 
-    const data = await this.emrClient.send(command);
-    console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
-    await waitUntilStepComplete(
-      { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
-      {
-        ClusterId: clusterId,
-        StepId: data.StepIds[0],
-      },
-    );
+      const data = await this.emrClient.send(command);
+      console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
+      await waitUntilStepComplete(
+        { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
+        {
+          ClusterId: clusterId,
+          StepId: data.StepIds[0],
+        },
+      );
 
-    await this.autoScale({
-      clusterId,
-      instanceFleetId: taskFleetDetails.Id,
-      targetSpotNodes: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
-    });
+      const result = await this.uploader.getEMROutput(outputDir);
 
-    const result = await this.uploader.getEMROutput(outputDir);
+      const end = Date.now();
+      console.log(`Running time: ${end - start} ms`);
 
-    const end = Date.now();
-    console.log(`Running time: ${end - start} ms`);
-
-    return result;
+      return result;
+    } catch (err) {
+      console.log('EMR processing error', err)
+      throw err
+    } finally {
+      // scale down
+      await this.autoScale({
+        clusterId,
+        instanceFleetId: taskFleetDetails.Id,
+        targetSpotNodes: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
+      });
+    }
   }
 
   async autoScale(args: {
