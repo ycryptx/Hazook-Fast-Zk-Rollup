@@ -8,9 +8,9 @@ const compilationCache: Cache = Cache.FileSystem(
 );
 
 /**
- * 
- * @param rollup 
- * @returns 
+ *
+ * @param rollup
+ * @returns
  */
 export const compile = async <Rollup extends RollupBase>(
   rollup: Rollup,
