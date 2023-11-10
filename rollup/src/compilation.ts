@@ -7,6 +7,11 @@ const compilationCache: Cache = Cache.FileSystem(
   path.join(__dirname, '..', 'compilation'),
 );
 
+/**
+ * 
+ * @param rollup 
+ * @returns 
+ */
 export const compile = async <Rollup extends RollupBase>(
   rollup: Rollup,
 ): Promise<void> => {
