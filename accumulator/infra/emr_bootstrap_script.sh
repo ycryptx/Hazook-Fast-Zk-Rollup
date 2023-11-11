@@ -18,3 +18,6 @@ ls $NODE_PATH
 npm i -g o1js@^0.14.1
 
 ls $NODE_PATH
+
+# Copy pre-compiled zkapp contract from S3 to each instance
+sudo aws s3 cp s3://mina-fast-zk-rollup-emr-data/compilation /compilation/ --recursive

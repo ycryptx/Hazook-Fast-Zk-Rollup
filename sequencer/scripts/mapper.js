@@ -331,7 +331,8 @@ const mapper = async (rollup, tx, proof) => {
         if (!line) {
             continue;
         }
-        const [lineNumber, sequentialism, isIntermediate, data] = line.split('\t');
+        // the first \t separated field is a key set by nLineInputFormat
+        const [, lineNumber, sequentialism, isIntermediate, data] = line.split('\t');
         if (!data) {
             continue;
         }
@@ -381,7 +382,7 @@ exports.mapper = mapper;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.compilationCache = exports.logger = exports.COMPILATION_CACHE_PATH = void 0;
 const o1js_1 = __webpack_require__(136);
-exports.COMPILATION_CACHE_PATH = `s3://${"mina-fast-zk-rollup-emr-data"}/compilation`;
+exports.COMPILATION_CACHE_PATH = `/compilation`;
 const logger = (instance, msg) => {
     console.error(`${new Date().toISOString()} ${instance}: ${msg}`);
 };
