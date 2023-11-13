@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createInterface } from 'readline';
 import { TransactionPreProcessor } from '@ycryptx/rollup';
+import { REDUCER_SEQUENTIALISM } from '../constants';
 
 export const runShellCommand = (cmd: string, log?: boolean): string => {
   try {
@@ -21,7 +22,6 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
 export const preProcessRawTransactions = async (
   inputFile: string,
 ): Promise<{ preprocessedFile: string; lineNumber: number }> => {
-  const sequentialism = 4; // each parallel process should not compute more than 4 proofs if there are enough cores
   const preprocessedFile = inputFile.replace('data', 'preprocessed');
   const rl = createInterface({
     input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
@@ -42,7 +42,7 @@ export const preProcessRawTransactions = async (
     const tx = txPreProcessor.processTx(parseInt(line));
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${lineNumber}\t${sequentialism}\t${'0'}\t${tx.serialize()}\n`,
+      `${lineNumber}\t${REDUCER_SEQUENTIALISM}\t${'0'}\t${tx.serialize()}\n`,
     );
     lineNumber += 1;
   }
