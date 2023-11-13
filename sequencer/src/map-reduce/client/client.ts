@@ -155,6 +155,10 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
               '-D',
               `mapreduce.input.lineinputformat.linespermap=${1}`,
+              '-D',
+              `mapreduce.job.reduces=${
+                Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
+              }}`,
               '-input',
               `s3://${inputFile}`,
               '-output',
@@ -265,8 +269,8 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
             'mapreduce.reduce.memory.mb': `${YARN_CONTAINER_MEMORY}`,
             'mapreduce.task.timeout': '0',
             'mapreduce.task.stuck.timeout-ms': '0',
-            'mapreduce.map.speculative': 'true',
-            'mapreduce.reduce.speculative': 'true',
+            'mapreduce.map.speculative': 'false',
+            'mapreduce.reduce.speculative': 'false',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
