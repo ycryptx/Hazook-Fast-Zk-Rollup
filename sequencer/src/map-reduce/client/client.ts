@@ -265,8 +265,8 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
             'mapreduce.reduce.memory.mb': `${YARN_CONTAINER_MEMORY}`,
             'mapreduce.task.timeout': '0',
             'mapreduce.task.stuck.timeout-ms': '0',
-            'mapreduce.map.speculative': 'false',
-            'mapreduce.reduce.speculative': 'false',
+            'mapreduce.map.speculative': 'true',
+            'mapreduce.reduce.speculative': 'true',
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
