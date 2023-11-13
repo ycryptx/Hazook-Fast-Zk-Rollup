@@ -158,7 +158,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               '-D',
               `mapred.reduce.tasks=${
                 Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
-              }}`,
+              }`,
               '-input',
               `s3://${inputFile}`,
               '-output',
