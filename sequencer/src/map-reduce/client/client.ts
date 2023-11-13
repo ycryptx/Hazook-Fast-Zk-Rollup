@@ -270,6 +270,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
             'mapreduce.map.output.compress': 'true',
             'mapreduce.map.output.compress.codec':
               'org.apache.hadoop.io.compress.SnappyCodec',
+            'stream.map.output.field.separator': '\t',
           },
         },
       ],
