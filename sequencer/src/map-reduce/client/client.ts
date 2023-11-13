@@ -156,7 +156,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
               '-D',
               `mapreduce.input.lineinputformat.linespermap=${1}`,
               '-D',
-              `mapreduce.job.reduces=${
+              `mapred.reduce.tasks=${
                 Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
               }}`,
               '-input',
