@@ -231,14 +231,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         InstanceFleetId: instanceFleetId,
         TargetSpotCapacity: targetSpotNodes,
         TargetOnDemandCapacity: 0,
-        ResizeSpecifications: {
-          SpotResizeSpecification: {
-            TimeoutDurationMinutes: 10,
-          },
-          OnDemandResizeSpecification: {
-            TimeoutDurationMinutes: 5,
-          },
-        },
       },
     });
     console.log(`EMR: autoscaling cluster to ${targetSpotNodes} spot nodes`);
