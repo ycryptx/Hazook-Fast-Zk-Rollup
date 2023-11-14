@@ -189,7 +189,11 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       const data = await this.emrClient.send(command);
       console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
       await waitUntilStepComplete(
-        { client: this.emrClient, maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME },
+        {
+          client: this.emrClient,
+          maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME,
+          maxDelay: 10,
+        },
         {
           ClusterId: clusterId,
           StepId: data.StepIds[0],

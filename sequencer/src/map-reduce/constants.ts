@@ -3,7 +3,7 @@
  */
 export const YARN_CONTAINER_MEMORY = 5120;
 /**
- * The amount of time the sequencer will wait for a map-reduce operation to finish
+ * The amount of time the sequencer will wait for a single map-reduce step to finish
  */
 export const MAX_MAP_REDUCE_WAIT_TIME = 60 * 60 * 2; // 2 hours
 /**
