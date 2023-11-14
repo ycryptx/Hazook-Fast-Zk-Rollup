@@ -192,7 +192,8 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         {
           client: this.emrClient,
           maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME,
-          maxDelay: 10,
+          minDelay: 10,
+          maxDelay: 60,
         },
         {
           ClusterId: clusterId,
@@ -231,6 +232,14 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         InstanceFleetId: instanceFleetId,
         TargetSpotCapacity: targetSpotNodes,
         TargetOnDemandCapacity: 0,
+        ResizeSpecifications: {
+          SpotResizeSpecification: {
+            TimeoutDurationMinutes: 10,
+          },
+          OnDemandResizeSpecification: {
+            TimeoutDurationMinutes: 5,
+          },
+        },
       },
     });
     console.log(`EMR: autoscaling cluster to ${targetSpotNodes} spot nodes`);
