@@ -83,6 +83,7 @@ export class Uploader<RollupProof extends RollupProofBase> {
       requests.push(this.s3Client.send(command));
     }
     const responses = await Promise.all(requests);
+    console.log(`Downloaded all EMR output parts from S3`);
     for (const response of responses) {
       results.push(response.Body.transformToString());
     }
@@ -90,6 +91,8 @@ export class Uploader<RollupProof extends RollupProofBase> {
     const desetializedArraysOfProofs = (await Promise.all(results))
       .filter((proofs) => proofs.trim() != '')
       .map((proofs) => JSON.parse(proofs.trim()));
+
+    console.log(`Deserialized and parsed all downloaded EMR outputs from S3`);
 
     const deserializedProofsArray = [];
     for (const proofArray of desetializedArraysOfProofs) {
