@@ -67,11 +67,13 @@ export class Uploader<RollupProof extends RollupProofBase> {
   }
 
   public async getEMROutput(emrOutputPath: string): Promise<RollupProof[]> {
+    console.log(`Getting EMR output from ${emrOutputPath} ...`);
     const results: Promise<string>[] = [];
 
     const outputParts = await this.listObjectsWithPrefix(
       `${emrOutputPath}/part`,
     );
+    console.log(`# of EMR output parts: ${outputParts.length}`);
     const requests: Promise<GetObjectCommandOutput>[] = [];
     for (const part of outputParts) {
       const command = new GetObjectCommand({

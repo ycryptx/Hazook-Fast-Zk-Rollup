@@ -79,6 +79,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
       fs.unlinkSync(absPathInputFile);
 
+      // TODO: we should upload to S3 from memory, not by writing to disk and then uploading it in line 65
       for (let i = 0; i < proofs.length; i++) {
         fs.appendFileSync(
           absPathInputFile,
@@ -188,7 +189,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
       const data = await this.emrClient.send(command);
       console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
-      await waitUntilStepComplete(
+      const waiterResult = await waitUntilStepComplete(
         {
           client: this.emrClient,
           maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME,
@@ -201,12 +202,18 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         },
       );
 
-      const result = await this.uploader.getEMROutput(outputDir);
+      if (waiterResult.state !== 'SUCCESS') {
+        const errMsg = `EMR job ${data.StepIds} failed! ${waiterResult.state} ${waiterResult.reason}`;
+        console.log(errMsg);
+        throw new Error(errMsg);
+      }
 
-      const end = Date.now();
-      console.log(`Running time: ${end - start} ms`);
-
-      return result;
+      console.log(
+        `EMR job ${data.StepIds} finished! Running time: ${
+          Date.now() - start
+        } ms`,
+      );
+      return this.uploader.getEMROutput(outputDir);
     } catch (err) {
       console.log('EMR processing error', err);
       throw err;

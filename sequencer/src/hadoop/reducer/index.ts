@@ -93,8 +93,10 @@ export const reducer = async (
       proof: intermediateProofs[partition].accumulated,
     });
   }
+  if (accumulatedProofs.length > 0) {
+    process.stdout.write(JSON.stringify(accumulatedProofs));
+  }
 
-  process.stdout.write(JSON.stringify(accumulatedProofs));
   logger(
     'reducer',
     `done: partitions ${accumulatedProofs.map((p) => p.order)}`,
