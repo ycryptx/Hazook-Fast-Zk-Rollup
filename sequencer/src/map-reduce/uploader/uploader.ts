@@ -1,16 +1,19 @@
-import { createReadStream } from 'fs';
 import * as path from 'path';
+import { createReadStream, appendFileSync, unlinkSync } from 'fs';
 import { Upload } from '@aws-sdk/lib-storage';
 import {
   S3Client,
   GetObjectCommand,
   ListObjectsV2Command,
   GetObjectCommandOutput,
+  UploadPartCommand,
+  CreateMultipartUploadCommand,
 } from '@aws-sdk/client-s3';
-import { MyRollupProof, RollupProofBase } from '@ycryptx/rollup';
+import { RollupProofBase } from '@ycryptx/rollup';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';
+import { logger } from '../../utils';
 
 /**
  * Uploads data to make it available to the Hadoop map-reduce pipeline
@@ -28,11 +31,137 @@ export class Uploader<RollupProof extends RollupProofBase> {
     }
   }
 
-  public async getLocalHadoopOutput(
-    container: string,
-    outputDir: string,
-  ): Promise<RollupProof[]> {
-    // get intermediate results
+  /**
+   * Uploads an input file from disk to be used by Hadoop map-reduce
+   *
+   * @param localFilePath
+   * @returns the url for where the MapReduce function can access the data
+   */
+  public async uploadInputFromDisk(localFilePath: string): Promise<string> {
+    return this.mode == Mode.LOCAL
+      ? this.uploadToLocalHadoopFromDisk(localFilePath)
+      : this.uploadToS3FromDisk(localFilePath);
+  }
+
+  // TODO: add an upload function that takes as input TransactionBase
+  /**
+   * Creates a Hadoop mapreduce input file chunk-by-chunk by uploading intermediate proofs from memory.
+   *
+   * @param inputFileKey e.g. input-123
+   * @param proofsOrTransactions
+   * @returns
+   */
+  public async *uploadInputInParts(
+    inputFileKey: string,
+    proofsOrTransactions: ReadableStream[],
+  ) {
+    if (this.mode == Mode.LOCAL) {
+      throw new Error('Multipart upload is not supported for local mode');
+    }
+
+    const command = new CreateMultipartUploadCommand({
+      Bucket: `${process.env.BUCKET_PREFIX}-emr-input`,
+      Key: inputFileKey,
+      ContentType: 'text/plain',
+    });
+    const { Key, UploadId } = await this.s3Client.send(command);
+    for (let i = 0; i < proofsOrTransactions.length; i++) {
+      yield await this.uploadInputPart(
+        Key,
+        UploadId,
+        proofsOrTransactions[i],
+        i,
+      );
+    }
+  }
+
+  public async uploadIntermediateProofs(
+    hadoopOutputLocation: string,
+  ): Promise<string> {
+    logger.info(
+      `Uploading intermediate proofs from ${hadoopOutputLocation} ...`,
+    );
+    if (this.mode == Mode.LOCAL) {
+      const filePath = path.join(
+        __dirname,
+        '../',
+        `preprocessed/input-${Date.now()}`,
+      );
+      const rawOutput = await this.getRawLocalHadoopOutput(
+        hadoopOutputLocation,
+      );
+      const newInputBlob = rawOutput.split('\t\n').join('\n');
+      appendFileSync(filePath, newInputBlob);
+      const inputLocation = await this.uploadToLocalHadoopFromDisk(filePath);
+      unlinkSync(filePath);
+      return inputLocation;
+    } else if (this.mode == Mode.EMR) {
+      return this.uploadIntermediateProofsEMR(hadoopOutputLocation);
+    }
+  }
+
+  /**
+   * Downloads the outputs of a Hadoop map-reduce job
+   *
+   * @param outputDir the URL of the output data directory (e.g. s3://my-bucket-output-data/output-123/)
+   * @returns proofs
+   */
+  public async getOutput(outputDir: string): Promise<RollupProof[]> {
+    return this.mode == Mode.LOCAL
+      ? this.getLocalHadoopOutput(outputDir)
+      : this.getEMROutput(outputDir);
+  }
+
+  private async uploadIntermediateProofsEMR(
+    hadoopOutputLocation: string,
+  ): Promise<string> {
+    logger.info(`Getting EMR output from ${hadoopOutputLocation} ...`);
+    const inputKey = `from-${hadoopOutputLocation}`;
+    const outputParts = await this.listNonEmptyObjectsWithPrefix(
+      `${hadoopOutputLocation}/part`,
+    );
+
+    logger.info(`# of EMR output parts: ${outputParts.length}`);
+    const requests: Promise<GetObjectCommandOutput>[] = [];
+    for (const part of outputParts) {
+      const command = new GetObjectCommand({
+        Bucket: `${process.env.BUCKET_PREFIX}-emr-output`,
+        Key: part,
+      });
+      requests.push(this.s3Client.send(command));
+    }
+    const outputPartsAsStreams = await Promise.all(requests).then((responses) =>
+      responses.map((response) => response.Body.transformToWebStream()),
+    );
+    const uploader = await this.uploadInputInParts(
+      inputKey,
+      outputPartsAsStreams,
+    );
+    for await (const _ of uploader) {
+      // logger.info('Uploaded part')
+    }
+    return inputKey;
+  }
+
+  private async uploadInputPart(
+    inputFileKey: string,
+    multipartUploadId: string,
+    proof: ReadableStream,
+    partNumber: number,
+  ) {
+    const command = new UploadPartCommand({
+      Bucket: `${process.env.BUCKET_PREFIX}-emr-input`,
+      Key: inputFileKey,
+      UploadId: multipartUploadId,
+      Body: proof,
+      PartNumber: partNumber,
+    });
+    return this.s3Client.send(command);
+  }
+
+  private async getRawLocalHadoopOutput(outputDir: string): Promise<string> {
+    const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
+
     let hadoopResults: string;
 
     // check if there are results from hadoop for 50 minutes max
@@ -46,34 +175,29 @@ export class Uploader<RollupProof extends RollupProofBase> {
       }
       await new Promise((resolve) => setTimeout(resolve, 1000 * 30));
     }
+    return hadoopResults;
+  }
+
+  private async getLocalHadoopOutput(
+    outputDir: string,
+  ): Promise<RollupProof[]> {
+    const hadoopResults = await this.getRawLocalHadoopOutput(outputDir);
     const splitHadoopResults = hadoopResults
       .split('\t\n')
       .filter((res) => res != '');
-    const desetializedArraysOfProofs = splitHadoopResults.map((proofString) =>
-      JSON.parse(proofString),
-    );
 
-    const deserializedProofsArray = [];
-    for (const proofArray of desetializedArraysOfProofs) {
-      deserializedProofsArray.push(...proofArray);
-    }
-
-    const sortedProofs: RollupProof[] = deserializedProofsArray
-      .sort((res1, res2) => res1.order - res2.order)
-      .map(
-        (res) => MyRollupProof.fromJSON(res.proof) as unknown as RollupProof,
-      ); // TODO: find a way to do this generically
-    return sortedProofs;
+    return this.deserializeIntermediateProofs(splitHadoopResults);
   }
 
-  public async getEMROutput(emrOutputPath: string): Promise<RollupProof[]> {
-    console.log(`Getting EMR output from ${emrOutputPath} ...`);
+  private async getEMROutput(emrOutputPath: string): Promise<RollupProof[]> {
+    logger.info(`Getting EMR output from ${emrOutputPath} ...`);
     const results: Promise<string>[] = [];
 
-    const outputParts = await this.listObjectsWithPrefix(
+    const outputParts = await this.listNonEmptyObjectsWithPrefix(
       `${emrOutputPath}/part`,
     );
-    console.log(`# of EMR output parts: ${outputParts.length}`);
+
+    logger.info(`# of EMR output parts: ${outputParts.length}`);
     const requests: Promise<GetObjectCommandOutput>[] = [];
     for (const part of outputParts) {
       const command = new GetObjectCommand({
@@ -83,59 +207,72 @@ export class Uploader<RollupProof extends RollupProofBase> {
       requests.push(this.s3Client.send(command));
     }
     const responses = await Promise.all(requests);
-    console.log(`Downloaded all EMR output parts from S3`);
+    logger.info(`Downloaded all EMR output parts from S3`);
     for (const response of responses) {
       results.push(response.Body.transformToString());
     }
 
-    const desetializedArraysOfProofs = (await Promise.all(results))
-      .filter((proofs) => proofs.trim() != '')
-      .map((proofs) => JSON.parse(proofs.trim()));
+    const proofs = await Promise.all(results).then((proofs) =>
+      this.deserializeIntermediateProofs(proofs),
+    );
 
-    console.log(`Deserialized and parsed all downloaded EMR outputs from S3`);
+    logger.info(`Deserialized and parsed all downloaded EMR outputs from S3`);
 
-    const deserializedProofsArray = [];
-    for (const proofArray of desetializedArraysOfProofs) {
-      deserializedProofsArray.push(...proofArray);
-    }
-
-    const sortedProofs: RollupProof[] = deserializedProofsArray
-      .sort((res1, res2) => parseInt(res1.order) - parseInt(res2.order))
-      .map(
-        (res) => MyRollupProof.fromJSON(res.proof) as unknown as RollupProof,
-      ); // TODO: find a way to do this generically
-
-    return sortedProofs;
+    return proofs;
   }
 
-  // Function to list objects with a specific prefix
-  async listObjectsWithPrefix(prefix: string): Promise<string[]> {
+  private deserializeIntermediateProofs(proofs: string[]): RollupProof[] {
+    logger.info(`Deserializing intermediate proofs...`);
+    const _results: { proof: RollupProof; order: number }[] = [];
+    const arraysOfProofs = proofs
+      .filter((_proofs) => _proofs.trim() != '')
+      .map((_proofs) => _proofs.split('\n'));
+
+    for (const proofArray of arraysOfProofs) {
+      for (const proof of proofArray) {
+        const [lineNumber, _sequentialism, _intermediateStage, proofString] =
+          proof.split('\t');
+        if (proofString) {
+          _results.push({
+            proof: JSON.parse(proofString),
+            order: parseInt(lineNumber),
+          });
+        }
+      }
+    }
+    return _results
+      .sort((res1, res2) => res1.order - res2.order)
+      .map((res) => res.proof);
+  }
+
+  /**
+   * Returns all Hadoop map-reduce output parts that are non-empty
+   *
+   * @param prefix
+   * @returns
+   */
+  private async listNonEmptyObjectsWithPrefix(
+    prefix: string,
+  ): Promise<string[]> {
     const command = new ListObjectsV2Command({
       Bucket: `${process.env.BUCKET_PREFIX}-emr-output`,
       Prefix: prefix,
+      MaxKeys: 1000000,
     });
 
     const response = await this.s3Client.send(command);
 
-    // The response contains the list of objects that match the prefix
-    const matchingObjects = response.Contents.map((c) => c.Key);
+    // The response contains the list of non-empty objects that match the prefix
+    // we filter by non-empty because most hadoop reduce containers generate an empty part file
+    // that we want to ignore
+    const matchingObjects = response.Contents.filter((c) => c.Size != 0).map(
+      (c) => c.Key,
+    );
 
     return matchingObjects;
   }
 
-  /**
-   * Uploads the file to a storage accessible to the MapReduce service
-   *
-   * @param filePath
-   * @returns the url/path where the MapReduce function can access the data
-   */
-  public async upload(filePath: string): Promise<string> {
-    return this.mode == Mode.LOCAL
-      ? this.uploadToLocalHadoop(filePath)
-      : this.uploadToS3(filePath);
-  }
-
-  private async uploadToS3(filePath: string): Promise<string> {
+  private async uploadToS3FromDisk(filePath: string): Promise<string> {
     const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
     const bucket = `${process.env.BUCKET_PREFIX}-emr-input`;
     const key = `input-${Date.now()}`;
@@ -157,14 +294,14 @@ export class Uploader<RollupProof extends RollupProofBase> {
     });
 
     parallelUploads3.on('httpUploadProgress', (progress) => {
-      console.log(progress);
+      logger.info(progress);
     });
 
     await parallelUploads3.done();
-    return `${bucket}/${key}`;
+    return `s3://${bucket}/${key}`;
   }
 
-  private async uploadToLocalHadoop(filePath: string): Promise<string> {
+  private async uploadToLocalHadoopFromDisk(filePath: string): Promise<string> {
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
     const fileName = path.parse(filePath).base;
     const mapperFilePath = path.join(

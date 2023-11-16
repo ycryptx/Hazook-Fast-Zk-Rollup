@@ -7,6 +7,7 @@ import {
 } from 'nice-grpc-server-reflection';
 import { Sequencer, SequencerServiceDefinition } from './services';
 import { RollupProofBase } from '@ycryptx/rollup';
+import { logger } from '../utils';
 
 export const initServer = <RollupProof extends RollupProofBase>(): void => {
   const grpcAddress = `0.0.0.0:${process.env.GRPC_SERVER_PORT}`;
@@ -26,5 +27,5 @@ export const initServer = <RollupProof extends RollupProofBase>(): void => {
 
   server.listen(grpcAddress);
 
-  console.log(`grpc server listening on ${grpcAddress}`);
+  logger.info(`grpc server listening on ${grpcAddress}`);
 };

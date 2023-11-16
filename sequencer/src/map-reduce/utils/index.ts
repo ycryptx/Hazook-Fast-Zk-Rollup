@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { createInterface } from 'readline';
 import { TransactionPreProcessor } from '@ycryptx/rollup';
 import { REDUCER_SEQUENTIALISM } from '../constants';
+import { logger } from '../../utils';
 
 export const runShellCommand = (cmd: string, log?: boolean): string => {
   try {
@@ -11,14 +12,12 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
     return (result || '').toString();
   } catch (err) {
     if (log) {
-      console.error(err);
+      logger.error(err);
     }
     return undefined;
   }
 };
 
-// TODO: add the ability to preprocess transactions 1-by-1 and not from an input file
-// also TODO: add the ability to submit to S3 transaction by transaction
 export const preProcessRawTransactions = async (
   inputFile: string,
 ): Promise<{ preprocessedFile: string; lineNumber: number }> => {

@@ -27,10 +27,11 @@ import {
   INSTANCE_TYPES,
   REDUCER_SEQUENTIALISM,
 } from '../constants';
+import { logger } from '../../utils';
 
 export class MapReduceClient<RollupProof extends RollupProofBase> {
+  public uploader: Uploader<RollupProof>;
   private mode: Mode;
-  private uploader: Uploader<RollupProof>;
   private emrClient?: EMRClient;
 
   constructor(mode: Mode, region: string) {
@@ -42,58 +43,56 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     }
   }
 
-  public async upload(filePath: string): Promise<string> {
-    return this.uploader.upload(filePath);
-  }
-
   /**
-   * Run the parallelized MapReduce operation
+   * Run the parallelized MapReduce operation to accumulate the proofs
    *
-   * @param inputFile the location of the input file that Map-Reduce should process
-   * @returns the result of the MapReduce
+   * @param inputFileURL URL/path to an input file containing transactions to process (e.g. s3://my-bucket-input-data/transactions.txt)
+   * @returns the accumulated proof
    */
-  async process(inputFile: string): Promise<RollupProof> {
-    const { preprocessedFile, lineNumber } = await preProcessRawTransactions(
-      inputFile,
-    );
-    const absPathInputFile = path.join(__dirname, '../', preprocessedFile);
-    let proofs: RollupProof[] = [];
+  public async process(
+    inputFileURL: string,
+    transactionCount: number,
+  ): Promise<RollupProof> {
+    const start = Date.now();
+    let outputLocation: string,
+      proofCount = transactionCount;
 
     // eslint-disable-next-line no-constant-condition
-    while (true) {
-      // upload data to Hadoop
-      const inputLocation = await this.uploader.upload(absPathInputFile);
+    while (proofCount > 1) {
+      outputLocation = await (this.mode == Mode.LOCAL
+        ? this.processLocal(inputFileURL)
+        : this.processEmr(inputFileURL, proofCount));
 
-      proofs = await (this.mode == Mode.LOCAL
-        ? this.processLocal(inputLocation)
-        : this.processEmr(
-            inputLocation,
-            proofs.length > 0 ? proofs.length : lineNumber,
-          ));
+      proofCount = Math.ceil(proofCount / REDUCER_SEQUENTIALISM);
 
-      console.log(`map reduce down to ${proofs.length} proofs`);
+      logger.info(`map reduce down to ${proofCount} proofs`);
 
-      if (proofs.length <= 1) {
-        break;
-      }
-
-      fs.unlinkSync(absPathInputFile);
-
-      // TODO: we should upload to S3 from memory, not by writing to disk and then uploading it in line 65
-      for (let i = 0; i < proofs.length; i++) {
-        fs.appendFileSync(
-          absPathInputFile,
-          `${i}\t${REDUCER_SEQUENTIALISM}\t${'1'}\t${JSON.stringify(
-            proofs[i].toJSON(),
-          )}\n`,
+      if (proofCount > 1) {
+        inputFileURL = await this.uploader.uploadIntermediateProofs(
+          outputLocation,
         );
       }
     }
-    console.log(`map reduce finished`);
+
+    logger.info(
+      `Map reduce finished! Total running time ${Date.now() - start}`,
+    );
+    logger.info('Fetching batched proof...');
+
+    const proofs = await this.uploader.getOutput(outputLocation);
+    // sanity check
+    if (proofs.length != 1) {
+      throw new Error(`Expected 1 proof but got ${proofs.length}`);
+    }
     return proofs[0];
   }
 
-  private async processLocal(inputFile: string): Promise<RollupProof[]> {
+  /**
+   *
+   * @param inputFile
+   * @returns
+   */
+  private async processLocal(inputFile: string): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
@@ -103,20 +102,27 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
         -D mapreduce.map.memory.mb=3072 \
         -D mapreduce.reduce.memory.mb=3072 \
+        -D mapreduce.input.lineinputformat.linespermap=4 \
         -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
         -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
         -input ${inputFile} \
-        -output ${outputDir}`,
+        -output ${outputDir} \
+        -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
       true,
     );
-
-    return this.uploader.getLocalHadoopOutput(container, outputDir);
+    return outputDir;
   }
 
+  /**
+   *
+   * @param inputFile
+   * @param numberOfProofs
+   * @returns the URL of the output data directory (e.g. s3://my-bucket-output-data/output-123/)
+   */
   private async processEmr(
-    inputFile: string,
+    inputFileURL: string,
     numberOfProofs: number,
-  ): Promise<RollupProof[]> {
+  ): Promise<string> {
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({
@@ -161,7 +167,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
                 Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
               }`,
               '-input',
-              `s3://${inputFile}`,
+              `${inputFileURL}`,
               '-output',
               `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputDir}`,
               '-mapper',
@@ -188,7 +194,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       const start = Date.now();
 
       const data = await this.emrClient.send(command);
-      console.log(`EMR AddJobFlowSteps: ${data.$metadata} ${data.StepIds}`);
+      logger.info(
+        `EMR job ${data.StepIds} added. Output location: ${outputDir}`,
+      );
       const waiterResult = await waitUntilStepComplete(
         {
           client: this.emrClient,
@@ -204,18 +212,18 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
       if (waiterResult.state !== 'SUCCESS') {
         const errMsg = `EMR job ${data.StepIds} failed! ${waiterResult.state} ${waiterResult.reason}`;
-        console.log(errMsg);
+        logger.error(errMsg);
         throw new Error(errMsg);
       }
 
-      console.log(
+      logger.info(
         `EMR job ${data.StepIds} finished! Running time: ${
           Date.now() - start
         } ms`,
       );
-      return this.uploader.getEMROutput(outputDir);
+      return outputDir;
     } catch (err) {
-      console.log('EMR processing error', err);
+      logger.error('EMR processing error', err);
       throw err;
     } finally {
       // scale down
@@ -227,7 +235,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     }
   }
 
-  async autoScale(args: {
+  private async autoScale(args: {
     clusterId: string;
     instanceFleetId: string;
     targetSpotNodes: number;
@@ -249,19 +257,19 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         },
       },
     });
-    console.log(`EMR: autoscaling cluster to ${targetSpotNodes} spot nodes`);
+    logger.info(`EMR: autoscaling cluster to ${targetSpotNodes} spot nodes`);
 
     try {
       await this.emrClient.send(command);
-      console.log(`EMR: autoscaling in progress...`);
+      logger.info(`EMR: autoscaling in progress...`);
       return;
     } catch (err) {
-      console.error('Error autoscaling EMR cluster:', err);
+      logger.error('Error autoscaling EMR cluster:', err);
       throw err;
     }
   }
 
-  async initCluster(): Promise<{
+  private async initCluster(): Promise<{
     clusterId: string;
     taskFleetDetails: InstanceFleet;
   }> {
@@ -329,7 +337,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
     try {
       const { JobFlowId } = await this.emrClient.send(command);
-      console.log('EMR job started successfully. JobFlowId:', JobFlowId);
+      logger.info('EMR job started successfully. JobFlowId:', JobFlowId);
 
       // Wait for the EMR job to complete
       await this.waitForClusterRunning(JobFlowId);
@@ -337,12 +345,12 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       const taskFleetDetails = await this.getRunningTaskFleetDetails(JobFlowId);
       return { clusterId: JobFlowId, taskFleetDetails };
     } catch (err) {
-      console.error('Error initializing EMR cluster:', err);
+      logger.error('Error initializing EMR cluster:', err);
       throw err;
     }
   }
 
-  public async getRunningTaskFleetDetails(
+  private async getRunningTaskFleetDetails(
     clusterId: string,
   ): Promise<InstanceFleet> {
     const InstanceFleets = await this.emrClient.send(
@@ -354,12 +362,12 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
   }
 
   private async waitForClusterRunning(jobFlowId): Promise<void> {
-    console.log('Waiting for cluster to be ready...');
+    logger.info('Waiting for cluster to be ready...');
     const describeClusterParams = { ClusterId: jobFlowId };
     await waitUntilClusterRunning(
       { client: this.emrClient, maxWaitTime: 600000 },
       describeClusterParams,
     );
-    console.log('EMR Cluster is ready');
+    logger.info('EMR Cluster is ready');
   }
 }

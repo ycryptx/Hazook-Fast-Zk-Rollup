@@ -26,8 +26,19 @@ export const reducer = async (
     };
   } = {};
 
+  let sequentialism = 0;
+  let intermediateStage = 0;
+
   for await (const line of rl) {
-    const [_partitionKey, lineNumber, proofString] = line.split('\t');
+    const [
+      _partitionKey,
+      lineNumber,
+      _sequentialism,
+      _intermediateStage,
+      proofString,
+    ] = line.split('\t');
+    sequentialism = parseInt(_sequentialism);
+    intermediateStage = parseInt(_intermediateStage);
     logger('reducer', `got proof ${lineNumber}, partition ${_partitionKey}`);
 
     if (!intermediateProofs[_partitionKey]) {
@@ -93,8 +104,19 @@ export const reducer = async (
       proof: intermediateProofs[partition].accumulated,
     });
   }
+
+  const nextIntermediateStage = intermediateStage + 1;
+
   if (accumulatedProofs.length > 0) {
-    process.stdout.write(JSON.stringify(accumulatedProofs));
+    let output = '';
+    for (const orderedProof of accumulatedProofs) {
+      output += `${
+        orderedProof.order
+      }\t${sequentialism}\t${nextIntermediateStage}\t${JSON.stringify(
+        orderedProof.proof,
+      )}\n`;
+    }
+    process.stdout.write(output);
   }
 
   logger(

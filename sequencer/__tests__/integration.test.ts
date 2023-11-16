@@ -22,8 +22,10 @@ describe('integration tests', () => {
     '1. demo-0: should sum numbers correctly',
     async () => {
       const dataFilePath = path.join(__dirname, 'misc/run.txt');
-      const inputLocation = await mapReduce.upload(dataFilePath);
-      const mapReduceResult = await mapReduce.process(inputLocation);
+      const inputLocation = await mapReduce.uploader.uploadInputFromDisk(
+        dataFilePath,
+      );
+      const mapReduceResult = await mapReduce.process(inputLocation, 8);
 
       expect(mapReduceResult).toEqual(`${1 + 2 + 3 + 4 + 5 + 6 + 7}`);
     },

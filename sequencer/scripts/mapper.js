@@ -319,9 +319,9 @@ const readline_1 = __webpack_require__(521);
 const utils_1 = __webpack_require__(587);
 const mapper = async (rollup, tx, proof) => {
     let compiled = false;
-    const deriveKey = (lineNumber, sequentialism) => {
-        const reducerId = lineNumber - (lineNumber % sequentialism);
-        const key = `${reducerId}\t${lineNumber}`;
+    const deriveKey = (lineNumber, sequentialism, intermediateStage) => {
+        const partition = lineNumber - (lineNumber % (sequentialism * (intermediateStage + 1)));
+        const key = `${partition}\t${lineNumber}`;
         return key;
     };
     const rl = (0, readline_1.createInterface)({
@@ -332,14 +332,14 @@ const mapper = async (rollup, tx, proof) => {
             continue;
         }
         // the first \t separated field is a key set by nLineInputFormat
-        const [, lineNumber, sequentialism, isIntermediate, data] = line.split('\t');
+        const [, lineNumber, sequentialism, intermediateStage, data] = line.split('\t');
         if (!data) {
             continue;
         }
         (0, utils_1.logger)('mapper', `got line ${lineNumber}`);
-        const mapKey = deriveKey(parseInt(lineNumber), parseInt(sequentialism));
-        if (isIntermediate == '1') {
-            process.stdout.write(`${mapKey}\t${data}\n`);
+        const mapKey = deriveKey(parseInt(lineNumber), parseInt(sequentialism), parseInt(intermediateStage));
+        if (parseInt(intermediateStage) > 0) {
+            process.stdout.write(`${mapKey}\t${sequentialism}\t${intermediateStage}\t${data}\n`);
             continue;
         }
         if (!compiled) {
@@ -366,7 +366,7 @@ const mapper = async (rollup, tx, proof) => {
         }
         (0, utils_1.logger)('mapper', `proof ${lineNumber} finished`);
         const proofString = JSON.stringify(proof.toJSON());
-        process.stdout.write(`${mapKey}\t${proofString}\n`);
+        process.stdout.write(`${mapKey}\t${sequentialism}\t${intermediateStage}\t${proofString}\n`);
         (0, utils_1.logger)('mapper', `done`);
     }
 };

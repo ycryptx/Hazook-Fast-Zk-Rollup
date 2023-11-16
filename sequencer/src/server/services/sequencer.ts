@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { RollupProofBase } from '@ycryptx/rollup';
 import {
   Case,
@@ -8,6 +9,7 @@ import {
   DeepPartial,
 } from '../compiled/services/sequencer/v1/sequencer_service';
 import { Mode, MapReduceClient } from '../../map-reduce';
+import { preProcessRawTransactions } from './../../map-reduce/utils';
 
 const MODE = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
 const REGION = process.env.REGION;
@@ -49,8 +51,17 @@ class Sequencer<RollupProof extends RollupProofBase>
       default:
     }
 
+    const { preprocessedFile, lineNumber: transactionCount } =
+      await preProcessRawTransactions(inputFile);
+    const absPathInputFile = path.join(__dirname, '../', preprocessedFile);
+
+    // upload transactions to hadoop
+    const inputFileUrl = await this.mapReduce.uploader.uploadInputFromDisk(
+      absPathInputFile,
+    );
+
     // start Hadoop map-reduce operation
-    const proof = await this.mapReduce.process(inputFile);
+    const proof = await this.mapReduce.process(inputFileUrl, transactionCount);
 
     response.result = JSON.stringify(proof.toJSON());
 

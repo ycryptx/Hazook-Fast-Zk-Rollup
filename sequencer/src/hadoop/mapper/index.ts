@@ -9,9 +9,14 @@ export const mapper = async (
 ): Promise<void> => {
   let compiled = false;
 
-  const deriveKey = (lineNumber: number, sequentialism: number): string => {
-    const reducerId = lineNumber - (lineNumber % sequentialism);
-    const key = `${reducerId}\t${lineNumber}`;
+  const deriveKey = (
+    lineNumber: number,
+    sequentialism: number,
+    intermediateStage: number,
+  ): string => {
+    const partition =
+      lineNumber - (lineNumber % (sequentialism * (intermediateStage + 1)));
+    const key = `${partition}\t${lineNumber}`;
     return key;
   };
 
@@ -25,7 +30,7 @@ export const mapper = async (
     }
 
     // the first \t separated field is a key set by nLineInputFormat
-    const [, lineNumber, sequentialism, isIntermediate, data] =
+    const [, lineNumber, sequentialism, intermediateStage, data] =
       line.split('\t');
 
     if (!data) {
@@ -34,10 +39,16 @@ export const mapper = async (
 
     logger('mapper', `got line ${lineNumber}`);
 
-    const mapKey = deriveKey(parseInt(lineNumber), parseInt(sequentialism));
+    const mapKey = deriveKey(
+      parseInt(lineNumber),
+      parseInt(sequentialism),
+      parseInt(intermediateStage),
+    );
 
-    if (isIntermediate == '1') {
-      process.stdout.write(`${mapKey}\t${data}\n`);
+    if (parseInt(intermediateStage) > 0) {
+      process.stdout.write(
+        `${mapKey}\t${sequentialism}\t${intermediateStage}\t${data}\n`,
+      );
       continue;
     }
 
@@ -65,7 +76,9 @@ export const mapper = async (
     }
     logger('mapper', `proof ${lineNumber} finished`);
     const proofString = JSON.stringify(proof.toJSON());
-    process.stdout.write(`${mapKey}\t${proofString}\n`);
+    process.stdout.write(
+      `${mapKey}\t${sequentialism}\t${intermediateStage}\t${proofString}\n`,
+    );
     logger('mapper', `done`);
   }
 };
