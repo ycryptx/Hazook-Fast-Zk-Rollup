@@ -1,13 +1,12 @@
 import * as path from 'path';
-import { createReadStream, appendFileSync, unlinkSync } from 'fs';
+import { Duplex, PassThrough, Readable } from 'stream';
+import { createReadStream, appendFileSync, unlinkSync, ReadStream } from 'fs';
 import { Upload } from '@aws-sdk/lib-storage';
 import {
   S3Client,
   GetObjectCommand,
   ListObjectsV2Command,
   GetObjectCommandOutput,
-  UploadPartCommand,
-  CreateMultipartUploadCommand,
 } from '@aws-sdk/client-s3';
 import { RollupProofBase } from '@ycryptx/rollup';
 
@@ -21,11 +20,15 @@ import { logger } from '../../utils';
 export class Uploader<RollupProof extends RollupProofBase> {
   private mode: Mode;
   private s3Client?: S3Client;
+  private inputBucket?: string;
+  private outputBucket?: string;
 
   constructor(mode: Mode, region: string) {
     this.mode = mode;
     if (this.mode == Mode.EMR) {
       this.s3Client = new S3Client({ region });
+      this.inputBucket = `${process.env.BUCKET_PREFIX}-emr-input`;
+      this.outputBucket = `${process.env.BUCKET_PREFIX}-emr-output`;
     } else if (this.mode == Mode.LOCAL) {
       // do something
     }
@@ -43,38 +46,12 @@ export class Uploader<RollupProof extends RollupProofBase> {
       : this.uploadToS3FromDisk(localFilePath);
   }
 
-  // TODO: add an upload function that takes as input TransactionBase
   /**
-   * Creates a Hadoop mapreduce input file chunk-by-chunk by uploading intermediate proofs from memory.
+   * Uploads intermediate proofs to S3 for EMR processing.
    *
-   * @param inputFileKey e.g. input-123
-   * @param proofsOrTransactions
-   * @returns
+   * @param hadoopOutputLocation The location of the Hadoop output.
+   * @returns The S3 location of the uploaded intermediate proofs.
    */
-  public async *uploadInputInParts(
-    inputFileKey: string,
-    proofsOrTransactions: ReadableStream[],
-  ) {
-    if (this.mode == Mode.LOCAL) {
-      throw new Error('Multipart upload is not supported for local mode');
-    }
-
-    const command = new CreateMultipartUploadCommand({
-      Bucket: `${process.env.BUCKET_PREFIX}-emr-input`,
-      Key: inputFileKey,
-      ContentType: 'text/plain',
-    });
-    const { Key, UploadId } = await this.s3Client.send(command);
-    for (let i = 0; i < proofsOrTransactions.length; i++) {
-      yield await this.uploadInputPart(
-        Key,
-        UploadId,
-        proofsOrTransactions[i],
-        i,
-      );
-    }
-  }
-
   public async uploadIntermediateProofs(
     hadoopOutputLocation: string,
   ): Promise<string> {
@@ -82,19 +59,7 @@ export class Uploader<RollupProof extends RollupProofBase> {
       `Uploading intermediate proofs from ${hadoopOutputLocation} ...`,
     );
     if (this.mode == Mode.LOCAL) {
-      const filePath = path.join(
-        __dirname,
-        '../',
-        `preprocessed/input-${Date.now()}`,
-      );
-      const rawOutput = await this.getRawLocalHadoopOutput(
-        hadoopOutputLocation,
-      );
-      const newInputBlob = rawOutput.split('\t\n').join('\n');
-      appendFileSync(filePath, newInputBlob);
-      const inputLocation = await this.uploadToLocalHadoopFromDisk(filePath);
-      unlinkSync(filePath);
-      return inputLocation;
+      return this.uploadIntermediateProofsHadoop(hadoopOutputLocation);
     } else if (this.mode == Mode.EMR) {
       return this.uploadIntermediateProofsEMR(hadoopOutputLocation);
     }
@@ -112,51 +77,91 @@ export class Uploader<RollupProof extends RollupProofBase> {
       : this.getEMROutput(outputDir);
   }
 
+  private async uploadIntermediateProofsHadoop(
+    hadoopOutputLocation: string,
+  ): Promise<string> {
+    const filePath = path.join(
+      __dirname,
+      '../',
+      `preprocessed/input-${Date.now()}`,
+    );
+    const rawOutput = await this.getRawLocalHadoopOutput(hadoopOutputLocation);
+    const newInputBlob = rawOutput.split('\t\n').join('\n');
+    appendFileSync(filePath, newInputBlob);
+    const inputLocation = await this.uploadToLocalHadoopFromDisk(filePath);
+    unlinkSync(filePath);
+    return inputLocation;
+  }
+
+  /**
+   * Uploads intermediate proofs to S3 for EMR processing.
+   *
+   * @param hadoopOutputLocation The location of the Hadoop output.
+   * @returns The S3 location of the uploaded intermediate proofs.
+   */
   private async uploadIntermediateProofsEMR(
     hadoopOutputLocation: string,
   ): Promise<string> {
     logger.info(`Getting EMR output from ${hadoopOutputLocation} ...`);
-    const inputKey = `from-${hadoopOutputLocation}`;
+    const sourceBucket = this.outputBucket;
+    const destinationBucket = this.inputBucket;
+    const destinationKey = `from-${hadoopOutputLocation}`;
     const outputParts = await this.listNonEmptyObjectsWithPrefix(
+      sourceBucket,
       `${hadoopOutputLocation}/part`,
     );
 
     logger.info(`# of EMR output parts: ${outputParts.length}`);
-    const requests: Promise<GetObjectCommandOutput>[] = [];
-    for (const part of outputParts) {
-      const command = new GetObjectCommand({
-        Bucket: `${process.env.BUCKET_PREFIX}-emr-output`,
-        Key: part,
-      });
-      requests.push(this.s3Client.send(command));
-    }
-    const outputPartsAsStreams = await Promise.all(requests).then((responses) =>
-      responses.map((response) => response.Body.transformToWebStream()),
+
+    await this.streamS3ObjectsToSingleObject(
+      sourceBucket,
+      outputParts,
+      destinationBucket,
+      destinationKey,
     );
-    const uploader = await this.uploadInputInParts(
-      inputKey,
-      outputPartsAsStreams,
+
+    logger.info(
+      `Finished streaming objects from source to destination buckets`,
     );
-    for await (const _ of uploader) {
-      // logger.info('Uploaded part')
-    }
-    return inputKey;
+
+    return `s3://${destinationBucket}/${destinationKey}`;
   }
 
-  private async uploadInputPart(
-    inputFileKey: string,
-    multipartUploadId: string,
-    proof: ReadableStream,
-    partNumber: number,
-  ) {
-    const command = new UploadPartCommand({
-      Bucket: `${process.env.BUCKET_PREFIX}-emr-input`,
-      Key: inputFileKey,
-      UploadId: multipartUploadId,
-      Body: proof,
-      PartNumber: partNumber,
-    });
-    return this.s3Client.send(command);
+  private async streamS3ObjectsToSingleObject(
+    sourceBucket: string,
+    sourceKeys: string[],
+    destinationBucket: string,
+    destinationKey: string,
+  ): Promise<void> {
+    const passThroughStream = new PassThrough();
+
+    const uploadPromise = this.uploadToS3(
+      destinationBucket,
+      destinationKey,
+      passThroughStream,
+    );
+
+    for (const key of sourceKeys) {
+      const command = new GetObjectCommand({
+        Bucket: sourceBucket,
+        Key: key,
+      });
+
+      const response = await this.s3Client.send(command);
+      const body = response.Body as Readable;
+
+      // Pipe the object's body stream to the pass-through stream
+      body.pipe(passThroughStream, { end: false });
+
+      // Append '\n' after each object
+      passThroughStream.push('\n');
+    }
+
+    // Signal the end of the pass-through stream
+    passThroughStream.push(null);
+
+    // Wait for the upload to complete
+    await uploadPromise.done();
   }
 
   private async getRawLocalHadoopOutput(outputDir: string): Promise<string> {
@@ -194,6 +199,7 @@ export class Uploader<RollupProof extends RollupProofBase> {
     const results: Promise<string>[] = [];
 
     const outputParts = await this.listNonEmptyObjectsWithPrefix(
+      this.outputBucket,
       `${emrOutputPath}/part`,
     );
 
@@ -201,7 +207,7 @@ export class Uploader<RollupProof extends RollupProofBase> {
     const requests: Promise<GetObjectCommandOutput>[] = [];
     for (const part of outputParts) {
       const command = new GetObjectCommand({
-        Bucket: `${process.env.BUCKET_PREFIX}-emr-output`,
+        Bucket: this.outputBucket,
         Key: part,
       });
       requests.push(this.s3Client.send(command));
@@ -252,10 +258,11 @@ export class Uploader<RollupProof extends RollupProofBase> {
    * @returns
    */
   private async listNonEmptyObjectsWithPrefix(
+    bucket: string,
     prefix: string,
   ): Promise<string[]> {
     const command = new ListObjectsV2Command({
-      Bucket: `${process.env.BUCKET_PREFIX}-emr-output`,
+      Bucket: bucket,
       Prefix: prefix,
       MaxKeys: 1000000,
     });
@@ -272,33 +279,39 @@ export class Uploader<RollupProof extends RollupProofBase> {
     return matchingObjects;
   }
 
+  // TODO: add an upload function that takes as input TransactionBase
   private async uploadToS3FromDisk(filePath: string): Promise<string> {
     const fileReadStream = createReadStream(filePath, { encoding: 'utf-8' });
-    const bucket = `${process.env.BUCKET_PREFIX}-emr-input`;
+    const bucket = this.inputBucket;
     const key = `input-${Date.now()}`;
 
-    const parallelUploads3 = new Upload({
+    const uploader = this.uploadToS3(bucket, key, fileReadStream);
+    await uploader.done();
+    return `s3://${bucket}/${key}`;
+  }
+
+  private uploadToS3(
+    bucket: string,
+    key: string,
+    stream: Duplex | ReadStream,
+  ): Upload {
+    const uploader = new Upload({
       client: this.s3Client,
       params: {
         Bucket: bucket,
         Key: key,
-        Body: fileReadStream,
+        Body: stream,
       },
 
       tags: [
         /*...*/
       ], // optional tags
-      queueSize: 4, // optional concurrency configuration
-      partSize: 1024 * 1024 * 5, // optional size of each part, in bytes, at least 5MB
-      leavePartsOnError: false, // optional manually handle dropped parts
     });
 
-    parallelUploads3.on('httpUploadProgress', (progress) => {
+    uploader.on('httpUploadProgress', (progress) => {
       logger.info(progress);
     });
-
-    await parallelUploads3.done();
-    return `s3://${bucket}/${key}`;
+    return uploader;
   }
 
   private async uploadToLocalHadoopFromDisk(filePath: string): Promise<string> {
