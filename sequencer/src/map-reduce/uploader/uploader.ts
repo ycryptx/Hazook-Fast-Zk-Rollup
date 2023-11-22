@@ -1,12 +1,13 @@
 import * as path from 'path';
-import { Duplex, PassThrough, Readable } from 'stream';
-import { createReadStream, appendFileSync, unlinkSync, ReadStream } from 'fs';
+import { PassThrough, Readable } from 'stream';
+import { createReadStream, appendFileSync, unlinkSync } from 'fs';
 import { Upload } from '@aws-sdk/lib-storage';
 import {
   S3Client,
   GetObjectCommand,
   ListObjectsV2Command,
   GetObjectCommandOutput,
+  PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { RollupProofBase } from '@ycryptx/rollup';
 
@@ -133,12 +134,12 @@ export class Uploader<RollupProof extends RollupProofBase> {
     destinationBucket: string,
     destinationKey: string,
   ): Promise<void> {
-    const passThroughStream = new PassThrough();
+    const stream = new PassThrough();
 
     const uploadPromise = this.uploadToS3(
       destinationBucket,
       destinationKey,
-      passThroughStream,
+      stream,
     );
 
     for (const key of sourceKeys) {
@@ -147,18 +148,13 @@ export class Uploader<RollupProof extends RollupProofBase> {
         Key: key,
       });
 
-      const response = await this.s3Client.send(command);
-      const body = response.Body as Readable;
-
-      // Pipe the object's body stream to the pass-through stream
-      body.pipe(passThroughStream, { end: false });
-
-      // Append '\n' after each object
-      passThroughStream.push('\n');
+      const responseStream = (await this.s3Client.send(command))
+        .Body as Readable;
+      for await (const chunk of responseStream) {
+        stream.write(chunk);
+      }
     }
-
-    // Signal the end of the pass-through stream
-    passThroughStream.push(null);
+    stream.end();
 
     // Wait for the upload to complete
     await uploadPromise.done();
@@ -293,7 +289,7 @@ export class Uploader<RollupProof extends RollupProofBase> {
   private uploadToS3(
     bucket: string,
     key: string,
-    stream: Duplex | ReadStream,
+    stream: PutObjectCommandInput['Body'],
   ): Upload {
     const uploader = new Upload({
       client: this.s3Client,
