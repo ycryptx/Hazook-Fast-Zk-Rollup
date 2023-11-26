@@ -15,7 +15,8 @@ export const mapper = async (
     intermediateStage: number,
   ): string => {
     const partition =
-      lineNumber - (lineNumber % (sequentialism * (intermediateStage + 1)));
+      lineNumber -
+      (lineNumber % Math.pow(sequentialism, intermediateStage + 1));
     const key = `${partition}\t${lineNumber}`;
     return key;
   };

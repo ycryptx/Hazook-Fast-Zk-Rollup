@@ -56,7 +56,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     let outputLocation: string,
       proofCount = transactionCount;
 
-    // eslint-disable-next-line no-constant-condition
     while (proofCount > 1) {
       outputLocation = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputFileURL, firstRun)
@@ -102,7 +101,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     let args = `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
     -D mapreduce.map.memory.mb=3072 \
     -D mapreduce.reduce.memory.mb=3072 \
-    -D mapreduce.input.lineinputformat.linespermap=4 \
+    ${firstRun ? `-D mapreduce.input.lineinputformat.linespermap=4 \\` : ''}
     -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
     -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
     -input ${inputFile} \
@@ -221,7 +220,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
           client: this.emrClient,
           maxWaitTime: MAX_MAP_REDUCE_WAIT_TIME,
           minDelay: 10,
-          maxDelay: 60,
+          maxDelay: 15,
         },
         {
           ClusterId: clusterId,

@@ -320,7 +320,8 @@ const utils_1 = __webpack_require__(587);
 const mapper = async (rollup, tx, proof) => {
     let compiled = false;
     const deriveKey = (lineNumber, sequentialism, intermediateStage) => {
-        const partition = lineNumber - (lineNumber % (sequentialism * (intermediateStage + 1)));
+        const partition = lineNumber -
+            (lineNumber % Math.pow(sequentialism, intermediateStage + 1));
         const key = `${partition}\t${lineNumber}`;
         return key;
     };
