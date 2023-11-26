@@ -4,7 +4,7 @@ const EbsConfiguration: EbsConfiguration = {
   EbsBlockDeviceConfigs: [
     {
       VolumeSpecification: {
-        SizeInGB: 3,
+        SizeInGB: 10,
         VolumeType: 'gp2',
       },
       VolumesPerInstance: 1,
