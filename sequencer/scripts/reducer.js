@@ -327,7 +327,7 @@ const reducer = async (rollup, proof) => {
     let sequentialism = 0;
     let intermediateStage = 0;
     for await (const line of rl) {
-        const [_partitionKey, lineNumber, _sequentialism, _intermediateStage, proofString] = line.split('\t');
+        const [_partitionKey, lineNumber, _sequentialism, _intermediateStage, proofString,] = line.split('\t');
         sequentialism = parseInt(_sequentialism);
         intermediateStage = parseInt(_intermediateStage);
         (0, utils_1.logger)('reducer', `got proof ${lineNumber}, partition ${_partitionKey}`);

@@ -47,12 +47,12 @@ export const REDUCER_SEQUENTIALISM = 2;
  */
 export const INSTANCE_TYPES: InstanceTypeConfig[] = [
   {
-    InstanceType: 'm5.xlarge',
+    InstanceType: 'm4.xlarge',
     BidPrice: '0.5',
     EbsConfiguration,
   },
   {
-    InstanceType: 'm5d.xlarge',
+    InstanceType: 'm5.xlarge',
     BidPrice: '0.5',
     EbsConfiguration,
   },
