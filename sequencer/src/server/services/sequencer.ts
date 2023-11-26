@@ -63,7 +63,7 @@ class Sequencer<RollupProof extends RollupProofBase>
     // start Hadoop map-reduce operation
     const proof = await this.mapReduce.process(inputFileUrl, transactionCount);
 
-    response.result = JSON.stringify(proof.toJSON());
+    response.result = JSON.stringify(proof);
 
     return response;
   };
