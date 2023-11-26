@@ -262,7 +262,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         TargetOnDemandCapacity: 0,
         ResizeSpecifications: {
           SpotResizeSpecification: {
-            TimeoutDurationMinutes: 10,
+            TimeoutDurationMinutes: 20,
           },
           OnDemandResizeSpecification: {
             TimeoutDurationMinutes: 5,
