@@ -53,6 +53,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     inputFileURL: string,
     transactionCount: number,
   ): Promise<RollupProof> {
+    let firstRun = true;
     const start = Date.now();
     let outputLocation: string,
       proofCount = transactionCount;
@@ -61,10 +62,10 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     while (proofCount > 1) {
       outputLocation = await (this.mode == Mode.LOCAL
         ? this.processLocal(inputFileURL)
-        : this.processEmr(inputFileURL, proofCount));
+        : this.processEmr(inputFileURL, proofCount, firstRun));
 
       proofCount = Math.ceil(proofCount / REDUCER_SEQUENTIALISM);
-
+      firstRun = false;
       logger.info(`map reduce down to ${proofCount} proofs`);
 
       if (proofCount > 1) {
@@ -122,7 +123,40 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
   private async processEmr(
     inputFileURL: string,
     numberOfProofs: number,
+    firstRun: boolean,
   ): Promise<string> {
+    const outputDir = `output-${randString.generate(7)}`;
+    const Args = [
+      'hadoop-streaming',
+      '-files',
+      `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
+      '-D',
+      `mapred.reduce.tasks=${
+        Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
+      }`,
+      '-input',
+      `${inputFileURL}`,
+      '-output',
+      `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputDir}`,
+      '-mapper',
+      'mapper.js',
+      '-reducer',
+      'reducer.js',
+    ];
+
+    if (firstRun) {
+      const linesPerMapArg = [
+        '-D',
+        `mapreduce.input.lineinputformat.linespermap=${1}`,
+      ];
+      const nlineInputFormatArg = [
+        '-inputformat',
+        'org.apache.hadoop.mapred.lib.NLineInputFormat',
+      ];
+      Args.splice(3, 0, ...linesPerMapArg);
+      Args.push(...nlineInputFormatArg);
+    }
+
     // get all available EMR clusters
     const clusters = await this.emrClient.send(
       new ListClustersCommand({
@@ -148,7 +182,6 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       taskFleetDetails = await this.getRunningTaskFleetDetails(clusterId);
     }
 
-    const outputDir = `output-${randString.generate(7)}`;
     const command = new AddJobFlowStepsCommand({
       JobFlowId: clusterId,
       Steps: [
@@ -156,27 +189,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
           Name: 'NodeJSStreamProcess',
           HadoopJarStep: {
             Jar: 'command-runner.jar',
-            Args: [
-              'hadoop-streaming',
-              '-files',
-              `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
-              '-D',
-              `mapreduce.input.lineinputformat.linespermap=${1}`,
-              '-D',
-              `mapred.reduce.tasks=${
-                Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
-              }`,
-              '-input',
-              `${inputFileURL}`,
-              '-output',
-              `s3://${process.env.BUCKET_PREFIX}-emr-output/${outputDir}`,
-              '-mapper',
-              'mapper.js',
-              '-reducer',
-              'reducer.js',
-              '-inputformat',
-              'org.apache.hadoop.mapred.lib.NLineInputFormat',
-            ],
+            Args,
           },
           ActionOnFailure: 'CONTINUE',
         },
