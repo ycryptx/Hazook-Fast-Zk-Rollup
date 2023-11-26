@@ -1,5 +1,3 @@
-import * as path from 'path';
-import * as fs from 'fs';
 import {
   EMRClient,
   RunJobFlowCommand,
@@ -16,7 +14,7 @@ import {
 import * as randString from 'randomstring';
 import { Mode } from '../types';
 import { Uploader } from '../uploader';
-import { runShellCommand, preProcessRawTransactions } from '../utils';
+import { runShellCommand } from '../utils';
 import { RollupProofBase } from '@ycryptx/rollup';
 import {
   YARN_CONTAINER_MEMORY,

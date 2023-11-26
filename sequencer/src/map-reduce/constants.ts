@@ -1,3 +1,18 @@
+import { EbsConfiguration, InstanceTypeConfig } from '@aws-sdk/client-emr';
+
+const EbsConfiguration: EbsConfiguration = {
+  EbsBlockDeviceConfigs: [
+    {
+      VolumeSpecification: {
+        SizeInGB: 3,
+        VolumeType: 'gp2',
+      },
+      VolumesPerInstance: 1,
+    },
+  ],
+  EbsOptimized: true,
+};
+
 /**
  * The amount of memory to allocate to each Hadoop container generating the proof in the map-reduce operation
  */
@@ -30,25 +45,30 @@ export const REDUCER_SEQUENTIALISM = 2;
  * The instance types the Hadoop cluster can use when it provisions / autoscales itself.
  * For now we only support instances of different families but similar size.
  */
-export const INSTANCE_TYPES = [
+export const INSTANCE_TYPES: InstanceTypeConfig[] = [
   {
     InstanceType: 'm5.xlarge',
     BidPrice: '0.5',
+    EbsConfiguration,
   },
   {
     InstanceType: 'm5d.xlarge',
     BidPrice: '0.5',
+    EbsConfiguration,
   },
   {
     InstanceType: 'm6a.xlarge',
     BidPrice: '0.5',
+    EbsConfiguration,
   },
   {
     InstanceType: 'm6g.xlarge',
     BidPrice: '0.5',
+    EbsConfiguration,
   },
   {
     InstanceType: 'm6i.xlarge',
     BidPrice: '0.5',
+    EbsConfiguration,
   },
 ];
