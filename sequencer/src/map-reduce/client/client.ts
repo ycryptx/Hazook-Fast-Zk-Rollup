@@ -59,7 +59,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     // eslint-disable-next-line no-constant-condition
     while (proofCount > 1) {
       outputLocation = await (this.mode == Mode.LOCAL
-        ? this.processLocal(inputFileURL)
+        ? this.processLocal(inputFileURL, firstRun)
         : this.processEmr(inputFileURL, proofCount, firstRun));
 
       proofCount = Math.ceil(proofCount / REDUCER_SEQUENTIALISM);
@@ -91,24 +91,32 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
    * @param inputFile
    * @returns
    */
-  private async processLocal(inputFile: string): Promise<string> {
+  private async processLocal(
+    inputFile: string,
+    firstRun: boolean,
+  ): Promise<string> {
     const outputDir = `/user/hduser/output-${randString.generate(7)}`;
 
     const container = process.env.HADOOP_LOCAL_CONTAINER_NAME;
 
+    let args = `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
+    -D mapreduce.map.memory.mb=3072 \
+    -D mapreduce.reduce.memory.mb=3072 \
+    -D mapreduce.input.lineinputformat.linespermap=4 \
+    -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
+    -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
+    -input ${inputFile} \
+    -output ${outputDir}`;
+
+    const nlineInputFormatArg = ` \
+    -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`;
+
+    if (firstRun) {
+      args += nlineInputFormatArg;
+    }
+
     // initiate map-reduce
-    runShellCommand(
-      `docker exec ${container} hadoop jar /home/hduser/hadoop-3.3.3/share/hadoop/tools/lib/hadoop-streaming-3.3.3.jar \
-        -D mapreduce.map.memory.mb=3072 \
-        -D mapreduce.reduce.memory.mb=3072 \
-        -D mapreduce.input.lineinputformat.linespermap=4 \
-        -mapper /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js \
-        -reducer /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js \
-        -input ${inputFile} \
-        -output ${outputDir} \
-        -inputformat org.apache.hadoop.mapred.lib.NLineInputFormat`,
-      true,
-    );
+    runShellCommand(args, true);
     return outputDir;
   }
 

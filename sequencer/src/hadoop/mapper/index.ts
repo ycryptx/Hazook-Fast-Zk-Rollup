@@ -29,9 +29,24 @@ export const mapper = async (
       continue;
     }
 
-    // the first \t separated field is a key set by nLineInputFormat
-    const [, lineNumber, sequentialism, intermediateStage, data] =
-      line.split('\t');
+    let lineNumber: string,
+      sequentialism: string,
+      intermediateStage: string,
+      data: string;
+
+    const split = line.split('\t');
+    if (split.length == 5) {
+      // the first \t separated field is a key set by nLineInputFormat
+      lineNumber = split[1];
+      sequentialism = split[2];
+      intermediateStage = split[3];
+      data = split[4];
+    } else {
+      lineNumber = split[0];
+      sequentialism = split[1];
+      intermediateStage = split[2];
+      data = split[3];
+    }
 
     if (!data) {
       continue;
