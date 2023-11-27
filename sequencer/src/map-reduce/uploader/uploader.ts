@@ -353,28 +353,26 @@ export class Uploader<RollupProof extends RollupProofBase> {
       process.env.REDUCER_FILE_PATH,
     );
 
-    runShellCommand(`docker exec ${container} hdfs dfs - mkdir / user`);
+    runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user`);
+    runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user/hduser`);
+    runShellCommand(`docker exec ${container} hdfs dfs -mkdir input`);
     runShellCommand(
-      `docker exec ${container} hdfs dfs - mkdir / user / hduser`,
-    );
-    runShellCommand(`docker exec ${container} hdfs dfs - mkdir input`);
-    runShellCommand(
-      `docker cp ${filePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
+      `docker cp ${filePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
     );
     runShellCommand(
-      `docker exec ${container} hdfs dfs - put / home / hduser / hadoop - 3.3.3 / etc / hadoop / ${fileName} input`,
+      `docker exec ${container} hdfs dfs -put /home/hduser/hadoop-3.3.3/etc/hadoop/${fileName} input`,
     );
     runShellCommand(
-      `docker cp ${mapperFilePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
+      `docker cp ${mapperFilePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
     );
     runShellCommand(
-      `docker cp ${reducerFilePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
+      `docker cp ${reducerFilePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
     );
 
     runShellCommand(
-      `docker exec ${container} sudo chmod a + x / home / hduser / hadoop - 3.3.3 / etc / hadoop / mapper.js / home / hduser / hadoop - 3.3.3 / etc / hadoop / reducer.js`,
+      `docker exec ${container} sudo chmod a+x /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js`,
     );
 
-    return `/ user / hduser / input / ${fileName} `;
+    return `/user/hduser/input/${fileName}`;
   }
 }
