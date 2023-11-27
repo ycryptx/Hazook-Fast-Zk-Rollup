@@ -383,7 +383,12 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     logger.info('Waiting for cluster to be ready...');
     const describeClusterParams = { ClusterId: jobFlowId };
     await waitUntilClusterRunning(
-      { client: this.emrClient, maxWaitTime: 600000 },
+      {
+        client: this.emrClient,
+        minDelay: 10,
+        maxDelay: 15,
+        maxWaitTime: 600000,
+      },
       describeClusterParams,
     );
     logger.info('EMR Cluster is ready');
