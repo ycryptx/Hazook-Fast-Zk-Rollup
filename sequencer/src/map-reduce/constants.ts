@@ -16,7 +16,7 @@ const EbsConfiguration: EbsConfiguration = {
 /**
  * The amount of memory to allocate to each Hadoop container generating the proof in the map-reduce operation
  */
-export const YARN_CONTAINER_MEMORY = 5120;
+export const YARN_CONTAINER_MEMORY = 4096;
 /**
  * The amount of time the sequencer will wait for a single map-reduce step to finish
  */
@@ -30,11 +30,11 @@ export const TASK_NODE_FLEET_NAME = 'TASK-NODE-FLEET';
  */
 export const TASK_NODE_FLEET_IDLE_TARGET_CAPACITY = 1;
 /**
- * because we're running on ?.xlarge instances (16gb of memory) and each container has 5gb of memory each container
+ * because we're running on ?.xlarge instances (16gb of memory) and each container has 4gb of memory each container
  * can run 3 containers in parallel. This value should be modified if either instance types are changed or if YARN_CONTAINER_MEMORY
  * is changed
  */
-export const PROOFS_PER_TASK_NODE = 2;
+export const PROOFS_PER_TASK_NODE = 3;
 /**
  * Each parallel Hadoop container running the reduce step
  * should not compute more than 2 proofs if there are enough cores
