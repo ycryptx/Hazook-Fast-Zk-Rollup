@@ -9,11 +9,12 @@ import {
   GetObjectCommandOutput,
   PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
-import { RollupProofBase } from '@ycryptx/rollup';
+import { RollupProofBase, TransactionBase } from '@ycryptx/rollup';
 
 import { Mode } from '../types';
 import { runShellCommand } from '../utils';
 import { logger } from '../../utils';
+import { REDUCER_SEQUENTIALISM } from '../constants';
 
 /**
  * Uploads data to make it available to the Hadoop map-reduce pipeline
@@ -33,6 +34,34 @@ export class Uploader<RollupProof extends RollupProofBase> {
     } else if (this.mode == Mode.LOCAL) {
       // do something
     }
+  }
+
+  /**
+   * The canonical function to upload transactions to S3 for EMR processing.
+   * Transactions are streamed to an input file in S3 by calling the write() function.
+   * To finish uploading the transactions, call the end() function.
+   *
+   * @returns the URL of the where the input file is stored.
+   */
+  public uploadTransactionsToS3() {
+    let i = 0;
+    const bucket = this.inputBucket;
+    const key = `input-${Date.now()}`;
+    const stream = new PassThrough();
+    const uploadPromise = this.uploadToS3(bucket, key, stream);
+
+    return {
+      write: (serializedTx: string): void => {
+        const line = `${i}\t${REDUCER_SEQUENTIALISM}\t${'0'}\t${serializedTx}\n`;
+        stream.write(line);
+        i += 1;
+      },
+      end: async (): Promise<string> => {
+        stream.end();
+        await uploadPromise.done();
+        return `s3://${bucket}/${key}`;
+      },
+    };
   }
 
   /**
@@ -324,26 +353,28 @@ export class Uploader<RollupProof extends RollupProofBase> {
       process.env.REDUCER_FILE_PATH,
     );
 
-    runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user`);
-    runShellCommand(`docker exec ${container} hdfs dfs -mkdir /user/hduser`);
-    runShellCommand(`docker exec ${container} hdfs dfs -mkdir input`);
+    runShellCommand(`docker exec ${container} hdfs dfs - mkdir / user`);
     runShellCommand(
-      `docker cp ${filePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
+      `docker exec ${container} hdfs dfs - mkdir / user / hduser`,
+    );
+    runShellCommand(`docker exec ${container} hdfs dfs - mkdir input`);
+    runShellCommand(
+      `docker cp ${filePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
     );
     runShellCommand(
-      `docker exec ${container} hdfs dfs -put /home/hduser/hadoop-3.3.3/etc/hadoop/${fileName} input`,
+      `docker exec ${container} hdfs dfs - put / home / hduser / hadoop - 3.3.3 / etc / hadoop / ${fileName} input`,
     );
     runShellCommand(
-      `docker cp ${mapperFilePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
+      `docker cp ${mapperFilePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
     );
     runShellCommand(
-      `docker cp ${reducerFilePath} ${container}:/home/hduser/hadoop-3.3.3/etc/hadoop/`,
-    );
-
-    runShellCommand(
-      `docker exec ${container} sudo chmod a+x /home/hduser/hadoop-3.3.3/etc/hadoop/mapper.js /home/hduser/hadoop-3.3.3/etc/hadoop/reducer.js`,
+      `docker cp ${reducerFilePath} ${container}: /home/hduser / hadoop - 3.3.3 / etc / hadoop / `,
     );
 
-    return `/user/hduser/input/${fileName}`;
+    runShellCommand(
+      `docker exec ${container} sudo chmod a + x / home / hduser / hadoop - 3.3.3 / etc / hadoop / mapper.js / home / hduser / hadoop - 3.3.3 / etc / hadoop / reducer.js`,
+    );
+
+    return `/ user / hduser / input / ${fileName} `;
   }
 }

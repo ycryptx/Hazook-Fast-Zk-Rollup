@@ -26,19 +26,5 @@ build-map-reduce-scripts: # builds mapper and reducer scripts to be uploaded to 
 	cat ./sequencer/bundle/map-reduce/mapper.js >> ./sequencer/scripts/mapper.js; \
 	cat ./sequencer/bundle/map-reduce/reducer.js >> ./sequencer/scripts/reducer.js;
 
-generate-demo-data:
-	for number in {0..7} ; do \
-    	echo $$number >> sequencer/data/run1.txt; \
-	done
-	for number in {0..63} ; do \
-    	echo $$number >> sequencer/data/run2.txt; \
-	done
-	for number in {0..255} ; do \
-    	echo $$number >> sequencer/data/run3.txt; \
-	done
-	for number in {0..16383} ; do \
-    	echo $$number >> sequencer/data/run4.txt; \
-	done
-
 run-demo:
 	grpc_cli call 0.0.0.0:8080 Demo "case: 1"

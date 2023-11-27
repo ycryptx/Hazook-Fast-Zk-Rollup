@@ -1,5 +1,4 @@
-import * as path from 'path';
-import { RollupProofBase } from '@ycryptx/rollup';
+import { RollupProofBase, TransactionPreProcessor } from '@ycryptx/rollup';
 import {
   Case,
   DemoRequest,
@@ -9,7 +8,7 @@ import {
   DeepPartial,
 } from '../compiled/services/sequencer/v1/sequencer_service';
 import { Mode, MapReduceClient } from '../../map-reduce';
-import { preProcessRawTransactions } from './../../map-reduce/utils';
+import { preprocessLocalTransactions } from '../../map-reduce/utils';
 
 const MODE = process.env.MODE == 'local' ? Mode.LOCAL : Mode.EMR;
 const REGION = process.env.REGION;
@@ -32,36 +31,41 @@ class Sequencer<RollupProof extends RollupProofBase>
    */
   demo = async (request: DemoRequest): Promise<DeepPartial<DemoResponse>> => {
     const response: DemoResponse = { result: '' };
-    let inputFile = '';
+    let txCount = 0;
 
     switch (request.case) {
       case Case.CASE_RUN_UNSPECIFIED:
       case Case.CASE_RUN_1:
-        inputFile = 'data/run1.txt';
+        txCount = 8;
         break;
       case Case.CASE_RUN_2:
-        inputFile = 'data/run2.txt';
+        txCount = 64;
         break;
       case Case.CASE_RUN_3:
-        inputFile = 'data/run3.txt';
+        txCount = 256;
         break;
       case Case.CASE_RUN_4:
-        inputFile = 'data/run4.txt';
+        txCount = 1024;
         break;
       default:
     }
 
-    const { preprocessedFile, lineNumber: transactionCount } =
-      await preProcessRawTransactions(inputFile);
-    const absPathInputFile = path.join(__dirname, '../', preprocessedFile);
+    let inputFileUrl: string;
 
-    // upload transactions to hadoop
-    const inputFileUrl = await this.mapReduce.uploader.uploadInputFromDisk(
-      absPathInputFile,
-    );
+    if (MODE === Mode.LOCAL) {
+      inputFileUrl = preprocessLocalTransactions(txCount);
+    } else {
+      const txUploader = this.mapReduce.uploader.uploadTransactionsToS3();
+      const txPreProcessor = new TransactionPreProcessor();
+      for (let i = 0; i < txCount; i++) {
+        const tx = txPreProcessor.processTx(i);
+        txUploader.write(tx.serialize());
+      }
+      inputFileUrl = await txUploader.end();
+    }
 
     // start Hadoop map-reduce operation
-    const proof = await this.mapReduce.process(inputFileUrl, transactionCount);
+    const proof = await this.mapReduce.process(inputFileUrl, txCount);
 
     response.result = JSON.stringify(proof);
 

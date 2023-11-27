@@ -1,7 +1,6 @@
 import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
-import { createInterface } from 'readline';
 import { TransactionPreProcessor } from '@ycryptx/rollup';
 import { REDUCER_SEQUENTIALISM } from '../constants';
 import { logger } from '../../utils';
@@ -18,66 +17,22 @@ export const runShellCommand = (cmd: string, log?: boolean): string => {
   }
 };
 
-export const preProcessRawTransactions = async (
-  inputFile: string,
-): Promise<{ preprocessedFile: string; lineNumber: number }> => {
-  const preprocessedFile = inputFile.replace('data', 'preprocessed');
-  const rl = createInterface({
-    input: fs.createReadStream(path.join(__dirname, '../', inputFile)),
-  });
-  const txPreProcessor = new TransactionPreProcessor();
-
+export const preprocessLocalTransactions = (txCount: number): string => {
+  const preprocessedFile = 'preprocessed/input';
   try {
     fs.unlinkSync(path.join(__dirname, '../', preprocessedFile));
   } catch (err) {
     // ignore
   }
 
-  let lineNumber = 0;
-  for await (const line of rl) {
-    if (!line) {
-      continue;
-    }
-    const tx = txPreProcessor.processTx(parseInt(line));
+  const txPreProcessor = new TransactionPreProcessor();
+  for (let i = 0; i < txCount; i++) {
+    const tx = txPreProcessor.processTx(i);
     fs.appendFileSync(
       path.join(__dirname, '../', preprocessedFile),
-      `${lineNumber}\t${REDUCER_SEQUENTIALISM}\t${'0'}\t${tx.serialize()}\n`,
+      `${i}\t${REDUCER_SEQUENTIALISM}\t${'0'}\t${tx.serialize()}\n`,
     );
-    lineNumber += 1;
   }
 
-  return { preprocessedFile, lineNumber };
+  return preprocessedFile;
 };
-
-const countLinesInFile = async (file: string): Promise<number> => {
-  const rl = createInterface({
-    input: fs.createReadStream(path.join(__dirname, '../', file)),
-  });
-  let lines = 0;
-  for await (const _ of rl) {
-    lines += 1;
-  }
-  return lines;
-};
-
-export function splitReorder<T>(txs: T[], splits: number): T[] {
-  if (splits >= txs.length) {
-    throw new Error('# of splits exceeds transaction count');
-  }
-  const reorderedTxs: T[] = new Array(txs.length);
-
-  // we are reordering transactions this way so that proofs will be accumulated in the correct order.
-  // refer to the mapper script for more details
-  let c = 0,
-    r = 0;
-  for (let i = 0; i < txs.length; i++) {
-    if (r + splits * c >= txs.length) {
-      r += 1;
-      c = 0;
-    }
-    const j = r + splits * c;
-    reorderedTxs[j] = txs[i];
-    c += 1;
-  }
-  return reorderedTxs;
-}

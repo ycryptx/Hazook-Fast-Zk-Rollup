@@ -141,8 +141,7 @@ export const Rollup = ZkProgram({
  */
 export class MyRollupProof
   extends ZkProgram.Proof(Rollup)
-  implements RollupProofBase
-{
+  implements RollupProofBase {
   public async merge(newProof: MyRollupProof): Promise<MyRollupProof> {
     const currentState = new RollupState({
       initialRoot: this.publicInput.initialRoot,
