@@ -28,7 +28,7 @@ for (const tx of transactions) {
 inputFileUrl = await txUploader.end();
 
 // Then we can initialize a Hadoop cluster and start the map-reduce operation
-const accumulatedProof = await this.mapReduce.process(inputFileUrl, transactions.length);
+const accumulatedProof = await client.process(inputFileUrl, transactions.length);
 ```
 
 ## [Deployment](./accumulator/infra/README.md)
