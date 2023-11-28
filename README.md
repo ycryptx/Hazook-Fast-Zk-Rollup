@@ -11,9 +11,9 @@ To start the sequencer:
 ```bash
 yarn sequencer start
 ```
-This starts up a grpc server which can be used to run the demos (You can call `make run-demo` to run a basic demo). You can modify the server code to fit your needs [here](sequencer/src/server/services/sequencer.ts).
+This starts up a grpc server which can be used to run the demos (You can call `make run-demo` to run a basic demo). You can modify the server code to fit your needs [here](sequencer/src/server/services/sequencer.ts)
 
-The core of the sequencer code is in [sequencer/src/map-reduce/](sequencer/src/map-reduce/client/client.ts). You can use it directly to run the map-reduce operation as such:
+To run the map-reduce on a set of transactions:
 ```typescript
 const MODE = MODES.EMR
 const REGION = 'eu-central-1'
