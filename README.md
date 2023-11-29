@@ -4,7 +4,7 @@ Take your Mina (ZkApp) Rollup to the next level by using cloud compute to parall
 
 ## Performance
 
-| Proof Count 	| Duration 	| Peak Instance Usage 	|
+| Transactions 	| Duration 	| Peak Instance Usage 	|
 |-------------	|----------	|---------------------	|
 | 8           	| 11min    	| 4                   	|
 | 64          	| 33min    	| 22                  	|
