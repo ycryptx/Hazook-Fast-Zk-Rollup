@@ -11,6 +11,10 @@ import {
   InstanceFleet,
   ListInstanceFleetsCommand,
 } from '@aws-sdk/client-emr';
+import {
+  DescribeAvailabilityZonesCommand,
+  EC2Client,
+} from '@aws-sdk/client-ec2';
 import * as randString from 'randomstring';
 import { Mode } from '../types';
 import { Uploader } from '../uploader';
@@ -30,11 +34,13 @@ import { logger } from '../../utils';
 export class MapReduceClient<RollupProof extends RollupProofBase> {
   public uploader: Uploader<RollupProof>;
   public onDemandInstances: boolean; // set to true to use on-demand instances instead of spot instances (for better reliability but for higher cost)
+  private region: string;
   private mode: Mode;
   private emrClient?: EMRClient;
 
   constructor(mode: Mode, region: string) {
     this.mode = mode;
+    this.region = region;
     this.uploader = new Uploader<RollupProof>(mode, region);
 
     if (this.mode == Mode.EMR) {
@@ -300,6 +306,25 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     clusterId: string;
     taskFleetDetails: InstanceFleet;
   }> {
+    const describeAvailabilityZonesResponse = await new EC2Client({
+      region: this.region,
+    }).send(
+      new DescribeAvailabilityZonesCommand({
+        Filters: [
+          { Name: 'region-name', Values: [this.region] },
+          {
+            Name: 'zone-type',
+            Values: ['availability-zone'],
+          },
+        ],
+      }),
+    );
+
+    const availabilityZones =
+      describeAvailabilityZonesResponse.AvailabilityZones.map(
+        (az) => az.ZoneName,
+      );
+
     const command = new RunJobFlowCommand({
       Name: 'accumulator',
       LogUri: `s3://${process.env.BUCKET_PREFIX}-emr-data`,
@@ -334,6 +359,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         },
       ],
       Instances: {
+        Placement: {
+          AvailabilityZones: availabilityZones,
+        },
         InstanceFleets: [
           {
             InstanceFleetType: 'MASTER',
