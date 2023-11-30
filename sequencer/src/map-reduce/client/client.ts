@@ -29,6 +29,7 @@ import { logger } from '../../utils';
 
 export class MapReduceClient<RollupProof extends RollupProofBase> {
   public uploader: Uploader<RollupProof>;
+  public onDemandInstances: boolean; // set to true to use on-demand instances instead of spot instances (for better reliability but for higher cost)
   private mode: Mode;
   private emrClient?: EMRClient;
 
@@ -38,6 +39,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
 
     if (this.mode == Mode.EMR) {
       this.emrClient = new EMRClient({ region });
+      this.onDemandInstances = false;
     }
   }
 
@@ -206,7 +208,8 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       await this.autoScale({
         clusterId,
         instanceFleetId: taskFleetDetails.Id,
-        targetSpotNodes: Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
+        targetInstanceCount:
+          Math.round(numberOfProofs / PROOFS_PER_TASK_NODE) + 1,
       });
 
       const start = Date.now();
@@ -248,7 +251,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       await this.autoScale({
         clusterId,
         instanceFleetId: taskFleetDetails.Id,
-        targetSpotNodes: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
+        targetInstanceCount: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
       });
     }
   }
@@ -256,15 +259,17 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
   private async autoScale(args: {
     clusterId: string;
     instanceFleetId: string;
-    targetSpotNodes: number;
+    targetInstanceCount: number;
   }): Promise<void> {
-    const { clusterId, instanceFleetId, targetSpotNodes } = args;
+    const { clusterId, instanceFleetId, targetInstanceCount } = args;
     const command = new ModifyInstanceFleetCommand({
       ClusterId: clusterId,
       InstanceFleet: {
         InstanceFleetId: instanceFleetId,
-        TargetSpotCapacity: targetSpotNodes,
-        TargetOnDemandCapacity: 0,
+        TargetSpotCapacity: this.onDemandInstances ? 0 : targetInstanceCount,
+        TargetOnDemandCapacity: this.onDemandInstances
+          ? targetInstanceCount
+          : 0,
         ResizeSpecifications: {
           SpotResizeSpecification: {
             TimeoutDurationMinutes: 20,
@@ -275,7 +280,11 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         },
       },
     });
-    logger.info(`EMR: autoscaling cluster to ${targetSpotNodes} spot nodes`);
+    logger.info(
+      `EMR: autoscaling cluster to ${targetInstanceCount} ${
+        this.onDemandInstances ? 'on-demand' : 'spot'
+      } instances`,
+    );
 
     try {
       await this.emrClient.send(command);
@@ -339,7 +348,12 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
           {
             Name: TASK_NODE_FLEET_NAME,
             InstanceFleetType: 'TASK',
-            TargetSpotCapacity: TASK_NODE_FLEET_IDLE_TARGET_CAPACITY, // Number of task instances
+            TargetSpotCapacity: this.onDemandInstances
+              ? 0
+              : TASK_NODE_FLEET_IDLE_TARGET_CAPACITY,
+            TargetOnDemandCapacity: this.onDemandInstances
+              ? TASK_NODE_FLEET_IDLE_TARGET_CAPACITY
+              : 0,
             InstanceTypeConfigs: INSTANCE_TYPES,
           },
         ],

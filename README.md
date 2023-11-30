@@ -52,6 +52,15 @@ inputFileUrl = await txUploader.end();
 const accumulatedProof = await client.process(inputFileUrl, transactions.length);
 ```
 
+## Instance Types
+By default the Hadoop Cluster runs on [AWS EC2 Spot Instances](https://aws.amazon.com/ec2/spot/) which are cheaper than normal (i.e. on-demand) instances. You can configure the spot instance bid price (SPOT_BID_PRICE_DOLLARS) [in this file](sequencer/src/map-reduce/constants.ts). It is currently set to $0.5.
+
+For large transaction batches (>1000 txs), it is more reliable to use on-demand instances though. This is because AWS often does not have enough spot instances to allocate for the job. You can select to use on-demand instances by setting:
+```typescript
+const client = new MapReduceClient<RollupProof>(MODE, REGION);
+client.onDemandInstances = true;
+```
+
 ## Acceptable ZkPrograms
 Your rollup (which is simply an o1-js ZkProgram) should work with Hazook almost out of the box, but it should be built as a Zk-Rollup as described in [Mina's documentation here](https://docs.minaprotocol.com/zkapps/tutorials/recursion#scaling-throughput-with-zkrollups-and-app-chains). To summarize, the ZkProgram should enable two functionalities: (1) a baseFunction which should generate and validate a base zk proof per transaction and (2) a mergeFunction which validates that two baseFunctions form a valid sequence and generates a proof of that. 
 

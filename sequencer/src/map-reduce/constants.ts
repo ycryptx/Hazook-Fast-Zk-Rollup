@@ -42,33 +42,38 @@ export const PROOFS_PER_TASK_NODE =
 export const REDUCER_SEQUENTIALISM = 2;
 
 /**
+ * The bid price for spot instances in US Dollars (modify this as you please)
+ */
+export const SPOT_BID_PRICE_DOLLARS = '0.5';
+
+/**
  * The instance types the Hadoop cluster can use when it provisions / autoscales itself.
  * For now we only support instances of different families but similar size.
  */
 export const INSTANCE_TYPES: InstanceTypeConfig[] = [
   {
     InstanceType: 'm5.xlarge',
-    BidPrice: '0.5',
+    BidPrice: SPOT_BID_PRICE_DOLLARS,
     EbsConfiguration,
   },
   {
     InstanceType: 'm5d.xlarge',
-    BidPrice: '0.5',
+    BidPrice: SPOT_BID_PRICE_DOLLARS,
     EbsConfiguration,
   },
   {
     InstanceType: 'm6a.xlarge',
-    BidPrice: '0.5',
+    BidPrice: SPOT_BID_PRICE_DOLLARS,
     EbsConfiguration,
   },
   {
     InstanceType: 'm6g.xlarge',
-    BidPrice: '0.5',
+    BidPrice: SPOT_BID_PRICE_DOLLARS,
     EbsConfiguration,
   },
   {
     InstanceType: 'm6i.xlarge',
-    BidPrice: '0.5',
+    BidPrice: SPOT_BID_PRICE_DOLLARS,
     EbsConfiguration,
   },
 ];

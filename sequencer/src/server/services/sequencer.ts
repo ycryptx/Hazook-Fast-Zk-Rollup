@@ -46,6 +46,7 @@ class Sequencer<RollupProof extends RollupProofBase>
         break;
       case Case.CASE_RUN_4:
         txCount = 1024;
+        this.mapReduce.onDemandInstances = true;
         break;
       default:
     }
@@ -68,6 +69,10 @@ class Sequencer<RollupProof extends RollupProofBase>
     const proof = await this.mapReduce.process(inputFileUrl, txCount);
 
     response.result = JSON.stringify(proof);
+
+    if (request.case == Case.CASE_RUN_4) {
+      this.mapReduce.onDemandInstances = false;
+    }
 
     return response;
   };
