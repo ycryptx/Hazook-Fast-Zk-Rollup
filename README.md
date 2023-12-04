@@ -9,6 +9,7 @@ Take your Mina (ZkApp) Rollup to the next level by using cloud compute to parall
 | 8           	| 11min    	| 4                   	|
 | 64          	| 33min    	| 22                  	|
 | 256         	| 40min    	| 65                  	|
+| 1000         	| 48min    	| 342                  	|
 
 Instances used are AWS EC2 m5.xlarge (or similar sized instances). Refer [to here](sequencer/src/map-reduce/constants.ts) for the full list of potential instances the Hadoop cluster might use. The tests were conducted on a Zk-Rollup which modifies a single MerkleMap.
 
