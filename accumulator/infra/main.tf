@@ -283,22 +283,6 @@ resource "aws_security_group" "sequencer" {
   }
 }
 
-resource "aws_security_group" "emr_dev" {
-  vpc_id = aws_vpc.main.id
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [aws_subnet.private_1.cidr_block]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = -1
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 resource "aws_security_group" "emr_master" {
   vpc_id = aws_vpc.main.id
   egress {
@@ -385,10 +369,6 @@ resource "aws_iam_instance_profile" "emr_ec2" {
 #   applications  = ["Hadoop"]
 #   service_role  = "EMR_DefaultRole"
 #   ec2_attributes {
-#     # TODO: WARNING: remove the machines from the public_1 subnet
-#     # before deploying this system to production!!!!!!!
-#     # We opened the floodgates to simplify the dev workflow.
-#     subnet_id                         = aws_subnet.public_1.id
 #     additional_master_security_groups = aws_security_group.emr_master.id
 #     additional_slave_security_groups  = aws_security_group.emr_core.id
 #     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
@@ -467,7 +447,6 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
       "elasticmapreduce:RunJobFlow",
       "elasticmapreduce:ModifyInstanceFleet",
       "elasticmapreduce:TerminateJobFlows",
-      // TODO: here to help ycryptx debug stuff, toremove
       "ec2:Describe*"
     ]
     resources = ["*"]
