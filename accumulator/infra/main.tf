@@ -1,11 +1,11 @@
 variable "region" {
   description = "AWS Deployment region."
-  default     = "eu-central-1"
+  default     = "us-west-2"
 }
 
 variable "project" {
   description = "Project name exposed in AWS user tag"
-  default     = "mina"
+  default     = "673156464838-mina"
 }
 
 locals {
@@ -14,9 +14,9 @@ locals {
 
 terraform {
   backend "s3" {
-    bucket = "mina-tf-state"
-    key    = "tfstate"
-    region = "eu-central-1"
+    bucket = "673156464838-terraform-states"
+    key    = "hazook-fast-rollup-poc.tfstate"
+    region = "us-west-2"
   }
   required_providers {
     aws = {
@@ -98,7 +98,7 @@ resource "aws_s3_bucket" "emr_data" {
 }
 
 data "aws_iam_user" "ci_user" {
-  user_name = "docker-registry-github"
+  user_name = "Simonas"
 }
 
 resource "aws_iam_user_policy" "ci_user_data_bucket" {
@@ -140,7 +140,7 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
 resource "aws_s3_object" "emr_bootstrap_script" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "emr_bootstrap_script.sh"
-  source = "bootstrap_script"
+  source = "emr_bootstrap_script.sh"
   etag   = filemd5("emr_bootstrap_script.sh")
 }
 
@@ -485,9 +485,24 @@ resource "aws_eip" "sequencer-eip" {
   }
 }
 
+resource "tls_private_key" "rsa" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
 resource "aws_key_pair" "ycryptx" {
   key_name   = "ycryptx"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz7QlDRx7Vvra3XCfB4bWwFSxEgw81DHgeNrFTR5dxT/J29MfZhW+rjJXR4mVAvUGEBlNsGJ6EwBt65FqWxuWTGARoW2jBVMxqwqxldYLKHWcWTv8IdaYAQniKwfOX/3NaaQEw93HwHbb8aYjbBudR/UtwOgT0vDpuxUzPwIDRxea3Za64qV0H7s6PnfbC5DcC9fOX72fiGXuwMaZAUN8dIgI9mZcEn3yaWfwqYQ+Qcx6pDEWG73YLXJfoZ7UtSp+GF6lgOcTc7pw+NIoUcU/Pq+I0d7ECIEaRXv97U2R8lbgBRkR7NIBjxqSKHb3m5wfDvLQGrrn2Mg7zmGa8buyfeNaBfolEfa+c8R2fS8smvd7El3K/ogMeRJ3j5actRIP74UKqrgQd6nTJDkxD4F09bDHcke+PLlLkyURnatcRGH3J56sVTXRM5mRGuoFufBz8s6K+jS2Fmxirf97fJ61gq/M7w4LEDDX2gncrNeX+QmqGeWXV5wBFkvS2lxYGl88="
+  public_key = tls_private_key.rsa.public_key_openssh
+}
+
+resource "local_file" "ycryptx_private_key" {
+  content  = tls_private_key.rsa.private_key_pem
+  filename = "${path.module}/ycryptx"
+}
+
+resource "local_file" "ycryptx_public_key" {
+  content  = tls_private_key.rsa.public_key_openssh
+  filename = "${path.module}/ycryptx.pub"
 }
 
 resource "aws_key_pair" "sequencer" {
@@ -504,7 +519,8 @@ resource "aws_network_interface" "priv-sequencer" {
 }
 
 resource "aws_instance" "sequencer" {
-  ami                    = "ami-0d6ee9d5e1c985df6" # NixOS 23.05.426.afc48694f2a
+  ami                    = "ami-0749963dd978a57c7" # us-west-2 NixOS 23.05.426.afc48694f2a
+  key_name               = aws_key_pair.ycryptx.id
   subnet_id              = aws_subnet.public_1.id
   instance_type          = "m5a.large"
   user_data              = file("./sequencer-nixos-config.nix")
@@ -515,5 +531,7 @@ resource "aws_instance" "sequencer" {
   }
   tags = {
     project = "${var.project}"
+    Name    = "${var.project}-sequencer"
   }
+  depends_on = [local_file.ycryptx_public_key]
 }

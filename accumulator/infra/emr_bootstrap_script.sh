@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
 . ~/.nvm/nvm.sh
@@ -20,4 +20,4 @@ npm i -g o1js@^0.14.1
 ls $NODE_PATH
 
 # Copy pre-compiled zkapp contract from S3 to each instance
-sudo aws s3 cp s3://mina-fast-zk-rollup-emr-data/compilation /compilation/ --recursive
+sudo aws s3 cp s3://673156464838-mina-fast-zk-rollup-emr-data/compilation /compilation/ --recursive
