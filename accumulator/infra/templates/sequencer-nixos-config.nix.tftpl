@@ -18,7 +18,7 @@
       isNormalUser = true;
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = [
-        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDA6jFgaWPwdPUxGi54vkJ/8nkUj9ctob/4vZY2wIltj8wNiK3kHcmLHTxk41v7FyX/2cbeUqbSqKVZtwCAmf54LGvtfNccdYyGuhyQF42/b0LdXO+Cnf4tDS19XVIOzbdlVEuxvE0evHCCstAvoIlj/NczeUBJSzTIrUOdCay8dc1NG9bGIOIIQ9aq473OQnG9ICUQA5uf/kUfZ9GNFeDBosK9eu02EGJq3CmLRskzZNHWoUMtqGNp1cy/cc64OzqaQRAVeG9yhPE//E4JvzCselOffEv8noN8h7fEpHDDmf3Akj8qPn/kd/O/1uK8EdivMfsnnZYB/wRD7XFFgN+T"
+        "${ycryptx_public_key}"
       ];
     };
   };
@@ -35,13 +35,11 @@
 
   services.nginx = {
     enable = true;
-    virtualHosts."ec2-54-214-62-202.us-west-2.compute.amazonaws.com" = {
+    virtualHosts."${public_dns}" = {
       addSSL = true;
       # Self-signed certificates.
       enableACME = true;
       acmeRoot = "/var/lib/acme/challenges";
-      #sslCertificate = "/var/lib/acme/ec2-54-214-62-202.us-west-2.compute.amazonaws.com/cert.pem";
-      #sslCertificateKey = "/var/lib/acme/ec2-54-214-62-202.us-west-2.compute.amazonaws.com/key.pem";
       locations."/" = {
         extraConfig = ''
           grpc_pass grpc://127.0.0.1:8080;
@@ -94,8 +92,8 @@
           environment = {
             MODE = "production";
             GRPC_SERVER_PORT = "8080";
-            REGION = "us-west-2";
-            BUCKET_PREFIX = "673156464838-mina-fast-zk-rollup";
+            REGION = "${region}";
+            BUCKET_PREFIX = "${bucket-prefix}";
           };
         };
       };

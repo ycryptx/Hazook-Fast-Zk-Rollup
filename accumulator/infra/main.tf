@@ -10,6 +10,18 @@ variable "project" {
 
 locals {
   s3-prefix = "${var.project}-fast-zk-rollup"
+
+  sequencer-nixos-config-values = {
+    ycryptx_public_key = tls_private_key.rsa.public_key_openssh,
+    public_dns         = aws_eip.sequencer-eip.public_dns,
+    bucket-prefix      = local.s3-prefix,
+    region             = var.region
+  }
+
+  sequencer-nixos-config = templatefile(
+    "${path.module}/templates/sequencer-nixos-config.nix.tftpl",
+    local.sequencer-nixos-config-values
+  )
 }
 
 terraform {
@@ -22,6 +34,12 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.4"
+    }
+    tls = {
+      source = "hashicorp/tls"
+    }
+    local = {
+      source = "hashicorp/local"
     }
   }
 }
@@ -478,11 +496,16 @@ resource "aws_iam_instance_profile" "sequencer_emr_profile" {
 }
 
 resource "aws_eip" "sequencer-eip" {
-  instance = aws_instance.sequencer.id
-  domain   = "vpc"
+  domain = "vpc"
   tags = {
     project = "${var.project}"
   }
+}
+
+resource "aws_eip_association" "sequencer-eip" {
+  instance_id          = aws_instance.sequencer.id
+  allocation_id        = aws_eip.sequencer-eip.id
+  network_interface_id = aws_network_interface.pub-sequencer.id
 }
 
 resource "tls_private_key" "rsa" {
@@ -517,15 +540,24 @@ resource "aws_network_interface" "priv-sequencer" {
     device_index = 2
   }
 }
+resource "aws_network_interface" "pub-sequencer" {
+  subnet_id       = aws_subnet.public_1.id
+  security_groups = [aws_security_group.sequencer.id]
+}
 
 resource "aws_instance" "sequencer" {
-  ami                    = "ami-0749963dd978a57c7" # us-west-2 NixOS 23.05.426.afc48694f2a
-  key_name               = aws_key_pair.ycryptx.id
-  subnet_id              = aws_subnet.public_1.id
-  instance_type          = "m5a.large"
-  user_data              = file("./sequencer-nixos-config.nix")
-  iam_instance_profile   = aws_iam_instance_profile.sequencer_emr_profile.name
-  vpc_security_group_ids = [aws_security_group.sequencer.id]
+  ami      = "ami-0749963dd978a57c7" # us-west-2 NixOS 23.05.426.afc48694f2a
+  key_name = aws_key_pair.ycryptx.id
+  #subnet_id              = aws_subnet.public_1.id
+  instance_type        = "m5a.large"
+  user_data            = local.sequencer-nixos-config
+  iam_instance_profile = aws_iam_instance_profile.sequencer_emr_profile.name
+  #vpc_security_group_ids = [aws_security_group.sequencer.id]
+
+  network_interface {
+    network_interface_id = aws_network_interface.pub-sequencer.id
+    device_index         = 0
+  }
   root_block_device {
     volume_size = 15
   }
@@ -533,5 +565,10 @@ resource "aws_instance" "sequencer" {
     project = "${var.project}"
     Name    = "${var.project}-sequencer"
   }
-  depends_on = [local_file.ycryptx_public_key]
+  depends_on = [aws_eip.sequencer-eip]
 }
+
+output "public_dns" {
+  value = aws_instance.sequencer.public_dns
+}
+
