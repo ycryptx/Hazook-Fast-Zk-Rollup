@@ -1,47 +1,42 @@
 variable "region" {
   description = "AWS Deployment region."
-  default     = "us-west-2"
 }
 
 variable "project" {
   description = "Project name exposed in AWS user tag"
-  default     = "673156464838-mina"
+}
+
+variable "openssh_public_key" {
+  description = "Public key to ssh to ec2 instance."
+}
+
+variable "aws_user" {
+  description = "AWS user that will get access to emr_data bucket"
+}
+
+variable "email" {
+  description = "An email to use with Let's encrypt ACME service"
+}
+
+variable "ref" {
+  description = "Terraform branch/tag"
 }
 
 locals {
   s3-prefix = "${var.project}-fast-zk-rollup"
 
   sequencer-nixos-config-values = {
-    ycryptx_public_key = tls_private_key.rsa.public_key_openssh,
+    ycryptx_public_key = var.openssh_public_key,
     public_dns         = aws_eip.sequencer-eip.public_dns,
     bucket-prefix      = local.s3-prefix,
     region             = var.region
+    email              = var.email
   }
 
   sequencer-nixos-config = templatefile(
     "${path.module}/templates/sequencer-nixos-config.nix.tftpl",
     local.sequencer-nixos-config-values
   )
-}
-
-terraform {
-  backend "s3" {
-    bucket = "673156464838-terraform-states"
-    key    = "hazook-fast-rollup-poc.tfstate"
-    region = "us-west-2"
-  }
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.4"
-    }
-    tls = {
-      source = "hashicorp/tls"
-    }
-    local = {
-      source = "hashicorp/local"
-    }
-  }
 }
 
 provider "aws" {
@@ -116,7 +111,7 @@ resource "aws_s3_bucket" "emr_data" {
 }
 
 data "aws_iam_user" "ci_user" {
-  user_name = "Simonas"
+  user_name = var.aws_user
 }
 
 resource "aws_iam_user_policy" "ci_user_data_bucket" {
@@ -158,22 +153,22 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
 resource "aws_s3_object" "emr_bootstrap_script" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "emr_bootstrap_script.sh"
-  source = "emr_bootstrap_script.sh"
-  etag   = filemd5("emr_bootstrap_script.sh")
+  source = "${path.module}/emr_bootstrap_script.sh"
+  etag   = filemd5("${path.module}/emr_bootstrap_script.sh")
 }
 
 resource "aws_s3_object" "emr_reducer" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "reducer.js"
-  source = "../../sequencer/scripts/reducer.js"
-  etag   = filemd5("../../sequencer/scripts/reducer.js")
+  source = "https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/reducer.js"
+  etag   = filemd5("https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/reducer.js")
 }
 
 resource "aws_s3_object" "emr_mapper" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "mapper.js"
-  source = "../../sequencer/scripts/mapper.js"
-  etag   = filemd5("../../sequencer/scripts/mapper.js")
+  source = "https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/mapper.js"
+  etag   = filemd5("https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/mapper.js")
 }
 
 # Public Subnet Setup
@@ -508,24 +503,9 @@ resource "aws_eip_association" "sequencer-eip" {
   network_interface_id = aws_network_interface.pub-sequencer.id
 }
 
-resource "tls_private_key" "rsa" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
 resource "aws_key_pair" "ycryptx" {
   key_name   = "ycryptx"
-  public_key = tls_private_key.rsa.public_key_openssh
-}
-
-resource "local_file" "ycryptx_private_key" {
-  content  = tls_private_key.rsa.private_key_pem
-  filename = "${path.module}/ycryptx"
-}
-
-resource "local_file" "ycryptx_public_key" {
-  content  = tls_private_key.rsa.public_key_openssh
-  filename = "${path.module}/ycryptx.pub"
+  public_key = var.openssh_public_key
 }
 
 resource "aws_key_pair" "sequencer" {

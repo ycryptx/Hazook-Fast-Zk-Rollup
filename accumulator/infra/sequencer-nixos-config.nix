@@ -18,7 +18,7 @@
       isNormalUser = true;
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = [
-        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDA6jFgaWPwdPUxGi54vkJ/8nkUj9ctob/4vZY2wIltj8wNiK3kHcmLHTxk41v7FyX/2cbeUqbSqKVZtwCAmf54LGvtfNccdYyGuhyQF42/b0LdXO+Cnf4tDS19XVIOzbdlVEuxvE0evHCCstAvoIlj/NczeUBJSzTIrUOdCay8dc1NG9bGIOIIQ9aq473OQnG9ICUQA5uf/kUfZ9GNFeDBosK9eu02EGJq3CmLRskzZNHWoUMtqGNp1cy/cc64OzqaQRAVeG9yhPE//E4JvzCselOffEv8noN8h7fEpHDDmf3Akj8qPn/kd/O/1uK8EdivMfsnnZYB/wRD7XFFgN+T"
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz7QlDRx7Vvra3XCfB4bWwFSxEgw81DHgeNrFTR5dxT/J29MfZhW+rjJXR4mVAvUGEBlNsGJ6EwBt65FqWxuWTGARoW2jBVMxqwqxldYLKHWcWTv8IdaYAQniKwfOX/3NaaQEw93HwHbb8aYjbBudR/UtwOgT0vDpuxUzPwIDRxea3Za64qV0H7s6PnfbC5DcC9fOX72fiGXuwMaZAUN8dIgI9mZcEn3yaWfwqYQ+Qcx6pDEWG73YLXJfoZ7UtSp+GF6lgOcTc7pw+NIoUcU/Pq+I0d7ECIEaRXv97U2R8lbgBRkR7NIBjxqSKHb3m5wfDvLQGrrn2Mg7zmGa8buyfeNaBfolEfa+c8R2fS8smvd7El3K/ogMeRJ3j5actRIP74UKqrgQd6nTJDkxD4F09bDHcke+PLlLkyURnatcRGH3J56sVTXRM5mRGuoFufBz8s6K+jS2Fmxirf97fJ61gq/M7w4LEDDX2gncrNeX+QmqGeWXV5wBFkvS2lxYGl88="
       ];
     };
   };
@@ -35,13 +35,11 @@
 
   services.nginx = {
     enable = true;
-    virtualHosts."ec2-54-214-62-202.us-west-2.compute.amazonaws.com" = {
+    virtualHosts."ec2-3-120-144-49.eu-central-1.compute.amazonaws.com" = {
       addSSL = true;
       # Self-signed certificates.
-      enableACME = true;
-      acmeRoot = "/var/lib/acme/challenges";
-      #sslCertificate = "/var/lib/acme/ec2-54-214-62-202.us-west-2.compute.amazonaws.com/cert.pem";
-      #sslCertificateKey = "/var/lib/acme/ec2-54-214-62-202.us-west-2.compute.amazonaws.com/key.pem";
+      sslCertificate = "/var/lib/acme/ec2-3-120-144-49.eu-central-1.compute.amazonaws.com/cert.pem";
+      sslCertificateKey = "/var/lib/acme/ec2-3-120-144-49.eu-central-1.compute.amazonaws.com/key.pem";
       locations."/" = {
         extraConfig = ''
           grpc_pass grpc://127.0.0.1:8080;
@@ -51,7 +49,7 @@
   };
 
   security.acme = {
-    defaults.email = "simonas.narbutas@minafoundation.com";
+    defaults.email = "consulting@alternativebit.fr";
     acceptTerms = true;
   };
 
@@ -63,7 +61,7 @@
 
   # We need to explicitely route the metadata service through the
   # subnet VPC. It won't respond from the public one.
-  networking.interfaces.ens5.ipv4.routes = [{
+  networking.interfaces.ens5.ipv4.routes = [ {
     address = "169.254.169.254";
     prefixLength = 32;
     via = "10.0.0.1";
@@ -74,7 +72,9 @@
     internalInterfaces = [
       "podman0"
     ];
-    externalInterface = "ens5";
+    externalInterfaces = [
+      "ens5"
+    ];
   };
 
   virtualisation = {
@@ -94,8 +94,8 @@
           environment = {
             MODE = "production";
             GRPC_SERVER_PORT = "8080";
-            REGION = "us-west-2";
-            BUCKET_PREFIX = "673156464838-mina-fast-zk-rollup";
+            REGION = "eu-central-1";
+            BUCKET_PREFIX = "mina-fast-zk-rollup";
           };
         };
       };

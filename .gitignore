@@ -2,3 +2,5 @@
 bundle
 .aws
 node_modules
+**/terraform*
+**/.terraform*
