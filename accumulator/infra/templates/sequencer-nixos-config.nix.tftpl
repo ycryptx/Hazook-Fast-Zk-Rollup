@@ -6,19 +6,11 @@
   security.sudo.wheelNeedsPassword = false;
 
   users.users = {
-    ninjatrappeur = {
+    sequencer = {
       isNormalUser = true;
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHzd1XAB7Pc8Tplur5iV3llOXtvlHru8pLtQlbvHzmt1"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOE7oDtq+xt5RuvMigDZMeZQODFr5Otz6HCO8wnI80oo"
-      ];
-    };
-    ycryptx = {
-      isNormalUser = true;
-      extraGroups = [ "wheel" ];
-      openssh.authorizedKeys.keys = [
-        "${ycryptx_public_key}"
+        "${openssh_public_key}"
       ];
     };
   };

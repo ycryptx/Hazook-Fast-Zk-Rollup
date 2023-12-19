@@ -31,7 +31,7 @@ module "Hazook-Fast-Zk-Rollup" {
   region             = local.region
   project            = local.project
   openssh_public_key = local.openssh_public_key
-  aws_user           = local.aws_user
+  ci_user            = local.ci_user
   email              = local.email
   ref                = local.ref
 }

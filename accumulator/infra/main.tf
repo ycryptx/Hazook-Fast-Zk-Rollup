@@ -10,8 +10,8 @@ variable "openssh_public_key" {
   description = "Public key to ssh to ec2 instance."
 }
 
-variable "aws_user" {
-  description = "AWS user that will get access to emr_data bucket"
+variable "ci_user" {
+  description = "AWS user used by CI to access emr_data bucket"
 }
 
 variable "email" {
@@ -26,7 +26,7 @@ locals {
   s3-prefix = "${var.project}-fast-zk-rollup"
 
   sequencer-nixos-config-values = {
-    ycryptx_public_key = var.openssh_public_key,
+    openssh_public_key = var.openssh_public_key,
     public_dns         = aws_eip.sequencer-eip.public_dns,
     bucket-prefix      = local.s3-prefix,
     region             = var.region
@@ -111,7 +111,7 @@ resource "aws_s3_bucket" "emr_data" {
 }
 
 data "aws_iam_user" "ci_user" {
-  user_name = var.aws_user
+  user_name = var.ci_user
 }
 
 resource "aws_iam_user_policy" "ci_user_data_bucket" {
@@ -145,30 +145,6 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
       },
     ]
   })
-}
-
-# TODO: we probably should rather upload those from the CI.
-# TODO: create a CI IAM role w/ write access to the emr-data bucket.
-
-resource "aws_s3_object" "emr_bootstrap_script" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "emr_bootstrap_script.sh"
-  source = "${path.module}/emr_bootstrap_script.sh"
-  etag   = filemd5("${path.module}/emr_bootstrap_script.sh")
-}
-
-resource "aws_s3_object" "emr_reducer" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "reducer.js"
-  source = "https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/reducer.js"
-  etag   = filemd5("https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/reducer.js")
-}
-
-resource "aws_s3_object" "emr_mapper" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "mapper.js"
-  source = "https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/mapper.js"
-  etag   = filemd5("https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/mapper.js")
 }
 
 # Public Subnet Setup
@@ -503,14 +479,9 @@ resource "aws_eip_association" "sequencer-eip" {
   network_interface_id = aws_network_interface.pub-sequencer.id
 }
 
-resource "aws_key_pair" "ycryptx" {
-  key_name   = "ycryptx"
-  public_key = var.openssh_public_key
-}
-
 resource "aws_key_pair" "sequencer" {
   key_name   = "sequencer"
-  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6tWZZkHYJJtD7G+hiOc8ICbNrDngrLtE/jst67wERX"
+  public_key = var.openssh_public_key
 }
 
 resource "aws_network_interface" "priv-sequencer" {
@@ -526,13 +497,11 @@ resource "aws_network_interface" "pub-sequencer" {
 }
 
 resource "aws_instance" "sequencer" {
-  ami      = "ami-0749963dd978a57c7" # us-west-2 NixOS 23.05.426.afc48694f2a
-  key_name = aws_key_pair.ycryptx.id
-  #subnet_id              = aws_subnet.public_1.id
+  ami                  = "ami-0749963dd978a57c7" # us-west-2 NixOS 23.05.426.afc48694f2a
+  key_name             = aws_key_pair.sequencer.id
   instance_type        = "m5a.large"
   user_data            = local.sequencer-nixos-config
   iam_instance_profile = aws_iam_instance_profile.sequencer_emr_profile.name
-  #vpc_security_group_ids = [aws_security_group.sequencer.id]
 
   network_interface {
     network_interface_id = aws_network_interface.pub-sequencer.id
@@ -547,8 +516,3 @@ resource "aws_instance" "sequencer" {
   }
   depends_on = [aws_eip.sequencer-eip]
 }
-
-output "public_dns" {
-  value = aws_instance.sequencer.public_dns
-}
-
