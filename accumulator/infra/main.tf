@@ -160,15 +160,15 @@ resource "aws_s3_object" "emr_bootstrap_script" {
 resource "aws_s3_object" "emr_reducer" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "reducer.js"
-  source = "https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/reducer.js"
-  etag   = filemd5("https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/reducer.js")
+  source = "./scripts/reducer.js"
+  etag   = filemd5("./scripts/reducer.js")
 }
 
 resource "aws_s3_object" "emr_mapper" {
   bucket = aws_s3_bucket.emr_data.id
   key    = "mapper.js"
-  source = "https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/mapper.js"
-  etag   = filemd5("https://raw.githubusercontent.com/MinaFoundation/Hazook-Fast-Zk-Rollup/${var.ref}/sequencer/scripts/mapper.js")
+  source = "./scripts/mapper.js"
+  etag   = filemd5("./scripts/mapper.js")
 }
 
 # Public Subnet Setup
