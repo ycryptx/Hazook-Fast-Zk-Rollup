@@ -7,7 +7,7 @@ variable "project" {
 }
 
 variable "openssh_public_key" {
-  description = "Public key to ssh to ec2 instance."
+  description = "A public ssh key to whitelist on ec2 instance."
 }
 
 variable "ci_user" {
@@ -16,10 +16,6 @@ variable "ci_user" {
 
 variable "email" {
   description = "An email to use with Let's encrypt ACME service"
-}
-
-variable "ref" {
-  description = "Terraform branch/tag"
 }
 
 locals {
@@ -315,6 +311,29 @@ data "aws_iam_policy_document" "ec2_bucket_access" {
     ]
     resources = ["*"]
   }
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:CreateServiceLinkedRole",
+      "iam:PutRolePolicy"
+    ]
+    resources = ["arn:aws:iam::*:role/aws-service-role/elasticmapreduce.amazonaws.com*/AWSServiceRoleForEMRCleanup*"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:AWSServiceName"
+      values   = ["elasticmapreduce.amazonaws.com", "elasticmapreduce.amazonaws.com.cn"]
+    }
+  }
+  statement {
+    effect    = "Allow"
+    resources = ["arn:aws:iam::*:role/EMR_DefaultRole_V2", ]
+    actions   = ["iam:PassRole"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:PassedToService"
+      values   = ["elasticmapreduce.amazonaws.com*"]
+    }
+  }
 }
 
 data "aws_iam_policy_document" "ec2_assume_role" {
@@ -341,6 +360,11 @@ resource "aws_iam_role_policy" "iam_emr_ec2" {
   name   = "iam-emr-ec2"
   role   = aws_iam_role.iam_emr_ec2.name
   policy = data.aws_iam_policy_document.ec2_bucket_access.json
+}
+
+resource "aws_iam_role_policy_attachment" "iam_emr_mapreduce" {
+  role       = aws_iam_role.iam_emr_ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"
 }
 
 resource "aws_iam_instance_profile" "emr_ec2" {
@@ -446,6 +470,29 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
       "iam:PassRole"
     ]
     resources = ["*"]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:CreateServiceLinkedRole",
+      "iam:PutRolePolicy"
+    ]
+    resources = ["arn:aws:iam::*:role/aws-service-role/elasticmapreduce.amazonaws.com*/AWSServiceRoleForEMRCleanup*"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:AWSServiceName"
+      values   = ["elasticmapreduce.amazonaws.com", "elasticmapreduce.amazonaws.com.cn"]
+    }
+  }
+  statement {
+    effect    = "Allow"
+    resources = ["arn:aws:iam::*:role/EMR_DefaultRole_V2", ]
+    actions   = ["iam:PassRole"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:PassedToService"
+      values   = ["elasticmapreduce.amazonaws.com*"]
+    }
   }
 }
 
