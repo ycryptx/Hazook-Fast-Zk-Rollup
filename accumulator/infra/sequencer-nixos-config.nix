@@ -96,6 +96,9 @@
             GRPC_SERVER_PORT = "8080";
             REGION = "eu-central-1";
             BUCKET_PREFIX = "mina-fast-zk-rollup";
+            ADDITIONAL_MASTER_SECURITY_GROUPS = "some-security-group";
+            ADDITIONAL_SLAVE_SECURITY_GROUPS = "some-security-group";
+            EC2_SUBNET_IDS = "['subnet_1', 'subnet_2']";
           };
         };
       };

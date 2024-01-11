@@ -22,11 +22,16 @@ locals {
   s3-prefix = "${var.project}-fast-zk-rollup"
 
   sequencer-nixos-config-values = {
-    openssh_public_key = var.openssh_public_key,
-    public_dns         = aws_eip.sequencer-eip.public_dns,
-    bucket-prefix      = local.s3-prefix,
-    region             = var.region
-    email              = var.email
+    openssh_public_key                = var.openssh_public_key,
+    public_dns                        = aws_eip.sequencer-eip.public_dns,
+    bucket_prefix                     = local.s3-prefix,
+    region                            = var.region
+    email                             = var.email
+    additional_master_security_groups = aws_security_group.emr_master.id
+    additional_slave_security_groups  = aws_security_group.emr_core.id
+    ec2_subnet_ids = [
+      aws_subnet.private_1.id
+    ]
   }
 
   sequencer-nixos-config = templatefile(
@@ -199,6 +204,8 @@ resource "aws_subnet" "private_1" {
     project = "${var.project}"
   }
 }
+
+## TODO: add more private subnets in a different availability zones, and also add them locals.ec2_subnet_ids
 
 resource "aws_eip" "nat_gateway" {
   domain = "vpc"
