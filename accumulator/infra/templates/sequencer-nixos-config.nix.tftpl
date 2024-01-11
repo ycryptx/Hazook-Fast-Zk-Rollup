@@ -88,7 +88,7 @@
             BUCKET_PREFIX = "${bucket_prefix}";
             ADDITIONAL_MASTER_SECURITY_GROUPS = "${additional_master_security_groups}";
             ADDITIONAL_SLAVE_SECURITY_GROUPS = "${additional_slave_security_groups}";
-            EC2_SUBNET_IDS = "${jsonencode(${ec2_subnet_ids})}";
+            EC2_SUBNET_IDS = toString ${jsonencode(ec2_subnet_ids)};
           };
         };
       };
