@@ -1,45 +1,6 @@
-variable "region" {
-  description = "AWS Deployment region."
-  default = "eu-central-1"
-}
-
-variable "project" {
-  description = "Project name exposed in AWS user tag"
-  default = "mina"
-}
-
-terraform {
-  backend "s3" {
-    bucket = "mina-tf-state"
-    key = "tfstate-bootstrap"
-    region = "eu-central-1"
-  }
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
-      version = "~> 5.4"
-    }
-  }
-}
-
-# Note: the ECR API is only available through us-east-1.
-# See: https://github.com/aws/karpenter/issues/3015
-provider "aws" {
-  region = "us-east-1"
-  alias = "virginia"
-}
-
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.virginia
-}
-
-provider "aws" {
-  region = "${var.region}"
-}
-
 resource "aws_ecrpublic_repository" "zk_rollup" {
-  repository_name = "zk-rollup-docker-registry"
-  provider = aws.virginia
+  repository_name = "${var.project}-zk-rollup"
+  provider        = aws.virginia
 
   catalog_data {
     about_text        = "Fast ZK Rollup Docker Registry"
@@ -48,13 +9,20 @@ resource "aws_ecrpublic_repository" "zk_rollup" {
   }
 }
 
-data "aws_iam_user" "registry_user" {
-  user_name = "docker-registry-github"
+# Note: the ECR API is only available through us-east-1.
+# See: https://github.com/aws/karpenter/issues/3015
+provider "aws" {
+  region = "us-east-1"
+  alias  = "virginia"
 }
 
-resource "aws_iam_user_policy" "registry_access" {
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.virginia
+}
+
+resource "aws_iam_user_policy" "ecr_access" {
   name = "test"
-  user = data.aws_iam_user.registry_user.user_name
+  user = data.aws_iam_user.zk_rollup.user_name
 
   # Terraform's "jsonencode" function converts a
   # Terraform expression result to valid JSON syntax.
@@ -77,8 +45,8 @@ data "aws_iam_policy_document" "zk_rollup_ecr_policy" {
   statement {
     effect = "Allow"
     principals {
-      type = "AWS"
-      identifiers = [ "${data.aws_iam_user.registry_user.arn}" ]
+      type        = "AWS"
+      identifiers = ["${data.aws_iam_user.zk_rollup.arn}"]
     }
     actions = [
       "ecr-public:*",
@@ -88,8 +56,8 @@ data "aws_iam_policy_document" "zk_rollup_ecr_policy" {
   statement {
     effect = "Allow"
     principals {
-      type = "*"
-      identifiers = [ "*" ]
+      type        = "*"
+      identifiers = ["*"]
     }
     actions = [
       "ecr-public:GetAuthorizationToken",
@@ -107,7 +75,7 @@ data "aws_iam_policy_document" "zk_rollup_ecr_policy" {
 }
 
 resource "aws_ecrpublic_repository_policy" "zk_rollup" {
-  provider = aws.virginia
+  provider        = aws.virginia
   repository_name = aws_ecrpublic_repository.zk_rollup.repository_name
-  policy = data.aws_iam_policy_document.zk_rollup_ecr_policy.json
+  policy          = data.aws_iam_policy_document.zk_rollup_ecr_policy.json
 }

@@ -75,7 +75,7 @@
       backend = "podman";
       containers = {
         zk-rollup = {
-          image = "public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest";
+          image = "${zk-rollup-ecr}:latest";
           autoStart = true;
           extraOptions = [ "--expose=8080" ];
           ports = [
@@ -108,7 +108,7 @@
   systemd.services.podman-zk-rollup.preStart = lib.mkForce ''
     podman rm -f zk-rollup || true
     rm -f /run/podman-zk-rollup.ctr-id
-    podman pull public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest
+    podman pull ${zk-rollup-ecr}:latest
   '';
 
 }

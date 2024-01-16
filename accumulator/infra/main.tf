@@ -1,26 +1,5 @@
-variable "region" {
-  description = "AWS Deployment region."
-}
-
-variable "project" {
-  description = "Project name exposed in AWS user tag"
-}
-
-variable "openssh_public_key" {
-  description = "A public ssh key to whitelist on ec2 instance."
-}
-
-variable "ci_user" {
-  description = "AWS user used by CI to access emr_data bucket"
-}
-
-variable "email" {
-  description = "An email to use with Let's encrypt ACME service"
-}
-
 locals {
   s3-prefix = "${var.project}-fast-zk-rollup"
-
   sequencer-nixos-config-values = {
     openssh_public_key                = var.openssh_public_key,
     public_dns                        = aws_eip.sequencer-eip.public_dns,
@@ -32,6 +11,7 @@ locals {
     ec2_subnet_ids = [
       aws_subnet.private_1.id
     ]
+    zk-rollup-ecr = aws_ecrpublic_repository.zk_rollup.repository_uri
   }
 
   sequencer-nixos-config = templatefile(
@@ -40,8 +20,21 @@ locals {
   )
 }
 
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.32"
+    }
+  }
+}
+
 provider "aws" {
   region = var.region
+}
+
+data "aws_iam_user" "zk_rollup" {
+  user_name = var.aws_user
 }
 
 resource "aws_vpc" "main" {
@@ -51,101 +44,6 @@ resource "aws_vpc" "main" {
   tags = {
     project = "${var.project}"
   }
-}
-
-# S3 Buckets
-#####################
-#
-# Creating the buckets needed by the EMR cluster to send/receive data,
-# and the one containing code and boostrap scripts.
-
-# Stores the EMR incoming data.
-resource "aws_s3_bucket" "emr_input" {
-  bucket = "${local.s3-prefix}-emr-input"
-  tags = {
-    project = "${var.project}"
-  }
-}
-
-# Stores the EMR result data.
-resource "aws_s3_bucket" "emr_output" {
-  bucket = "${local.s3-prefix}-emr-output"
-  tags = {
-    project = "${var.project}"
-  }
-}
-
-# Cleaning the input/output > 2 days objects. This is highly
-# transcient data, there's no point in keeping it forever.
-
-resource "aws_s3_bucket_lifecycle_configuration" "emr_input_expiration" {
-  bucket = aws_s3_bucket.emr_input.id
-  rule {
-    id     = "expiration"
-    status = "Enabled"
-    expiration {
-      days = 2
-    }
-    filter {}
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "emr_output_expiration" {
-  bucket = aws_s3_bucket.emr_output.id
-  rule {
-    id     = "expiration"
-    status = "Enabled"
-    expiration {
-      days = 2
-    }
-    filter {}
-  }
-}
-
-# Stores the EMR meta data. It contains the code for the
-# mappers/reducers, the bootstrap script, etc.
-resource "aws_s3_bucket" "emr_data" {
-  bucket = "${local.s3-prefix}-emr-data"
-  tags = {
-    project = "${var.project}"
-  }
-}
-
-data "aws_iam_user" "ci_user" {
-  user_name = var.ci_user
-}
-
-resource "aws_iam_user_policy" "ci_user_data_bucket" {
-  name = "ci-user-data-bucket"
-  user = data.aws_iam_user.ci_user.user_name
-
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:ListBucket",
-        ]
-        Effect = "Allow"
-        Resource = [
-          aws_s3_bucket.emr_data.arn
-        ]
-      },
-      {
-        Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:DeleteObject",
-        ]
-        Effect = "Allow"
-        Resource = [
-          "${aws_s3_bucket.emr_data.arn}/*"
-        ]
-      },
-    ]
-  })
 }
 
 # Public Subnet Setup
@@ -294,137 +192,6 @@ resource "aws_security_group" "emr_core" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
-# EMR
-######
-data "aws_iam_policy_document" "ec2_bucket_access" {
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "s3:AbortMultipartUpload",
-      "s3:DeleteObject",
-      "s3:GetBucketVersioning",
-      "s3:GetObject",
-      "s3:GetObjectTagging",
-      "s3:GetObjectVersion",
-      "s3:ListBucket",
-      "s3:ListBucketMultipartUploads",
-      "s3:ListBucketVersions",
-      "s3:ListMultipartUploadParts",
-      "s3:PutBucketVersioning",
-      "s3:PutObject",
-      "s3:PutObjectTagging"
-    ]
-    resources = ["*"]
-  }
-  statement {
-    effect = "Allow"
-    actions = [
-      "iam:CreateServiceLinkedRole",
-      "iam:PutRolePolicy"
-    ]
-    resources = ["arn:aws:iam::*:role/aws-service-role/elasticmapreduce.amazonaws.com*/AWSServiceRoleForEMRCleanup*"]
-    condition {
-      test     = "ForAnyValue:StringLike"
-      variable = "iam:AWSServiceName"
-      values   = ["elasticmapreduce.amazonaws.com", "elasticmapreduce.amazonaws.com.cn"]
-    }
-  }
-  statement {
-    effect    = "Allow"
-    resources = ["arn:aws:iam::*:role/EMR_DefaultRole_V2", ]
-    actions   = ["iam:PassRole"]
-    condition {
-      test     = "ForAnyValue:StringLike"
-      variable = "iam:PassedToService"
-      values   = ["elasticmapreduce.amazonaws.com*"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "ec2_assume_role" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-
-    actions = [
-      "sts:AssumeRole",
-    ]
-  }
-}
-
-resource "aws_iam_role" "iam_emr_ec2" {
-  name               = "iam_emr_ec2_role"
-  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
-}
-
-resource "aws_iam_role_policy" "iam_emr_ec2" {
-  name   = "iam-emr-ec2"
-  role   = aws_iam_role.iam_emr_ec2.name
-  policy = data.aws_iam_policy_document.ec2_bucket_access.json
-}
-
-resource "aws_iam_role_policy_attachment" "iam_emr_mapreduce" {
-  role       = aws_iam_role.iam_emr_ec2.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"
-}
-
-resource "aws_iam_instance_profile" "emr_ec2" {
-  name = "emr-ec2-profile"
-  role = aws_iam_role.iam_emr_ec2.name
-}
-
-// TODO: figure out if we want to add EMR provisioning from terraform,
-// as currently it is being done via-code by the sequencer. Also, note that
-// the configuration below is different: it uses instance groups, not instance fleets,
-// no instance type diversity, etc.
-# resource "aws_emr_cluster" "accumulator" {
-#   name          = "accumulator"
-#   release_label = "emr-6.11.0"
-#   applications  = ["Hadoop"]
-#   service_role  = "EMR_DefaultRole"
-#   ec2_attributes {
-#     additional_master_security_groups = aws_security_group.emr_master.id
-#     additional_slave_security_groups  = aws_security_group.emr_core.id
-#     instance_profile                  = aws_iam_instance_profile.emr_ec2.name
-#     key_name = aws_key_pair.ycryptx.key_name
-#   }
-
-#   log_uri = "s3://${aws_s3_bucket.emr_data.id}"
-
-#   master_instance_group {
-#     instance_count = 1
-#     instance_type  = "m5a.2xlarge"
-#     # The spot market for this instance has been stable and under .15 for
-#     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
-#     # Note: we probably want a non-spot master node in production.
-#     bid_price = 0.5
-#   }
-
-#   core_instance_group {
-#     instance_count = 1
-#     instance_type  = "m5a.2xlarge"
-#     # The spot market for this instance has been stable and under .15 for
-#     # the last 6 months. On demand is at 0.23, we save more than 50% of the bill.
-#     bid_price = 0.5
-#   }
-
-#   bootstrap_action {
-#     path = "s3://${aws_s3_bucket.emr_data.id}/emr_bootstrap_script.sh"
-#     name = "emr_bootstrap_script.semr_bootstrap_script.sh"
-#   }
-
-#   tags = {
-#     for-use-with-amazon-emr-managed-policies = true
-#     project                                  = "mina"
-#   }
-# }
-
 
 # Sequencer EC2 Setup
 #####################
