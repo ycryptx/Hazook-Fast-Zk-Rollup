@@ -1,5 +1,5 @@
 resource "aws_ecrpublic_repository" "zk_rollup" {
-  repository_name = "${var.project}-zk-rollup"
+  repository_name = "zk-rollup-docker-registry"
   provider        = aws.virginia
 
   catalog_data {
