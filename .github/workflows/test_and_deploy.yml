@@ -4,35 +4,38 @@
 name: fast-zk-rollup-ci
 
 on:
-  pull_request:
   push:
     branches:
       - main
+      - PM-796-parametrize-and-document-zkpAccumulator
 
 jobs:
   run_tests:
-    runs-on: ubuntu-latest
+    runs-on: minafoundation-default-runners
     env:
       LOCAL_HADOOP_IMAGE_NAME: ycryptx/mina:hadoop
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Use Node.js
-        uses: actions/setup-node@v2.2.0
+        uses: actions/setup-node@v4.0.1
         with:
           node-version: 18.12
-      - uses: docker/setup-buildx-action@v1
-      - name: Docker login
-        uses: docker/login-action@v1
+
+      - name: Create Docker Context
+        run: docker context create builder
+      - name: Install Yarn
+        run: |
+          sudo npm install -g yarn
+      - uses: docker/setup-buildx-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub username stored in GitHub Secrets
-          password: ${{ secrets.DOCKER_PASSWORD }}  # Docker Hub password stored in GitHub Secrets
-      - uses: docker/build-push-action@v2
+          endpoint: builder
+      - uses: docker/build-push-action@v5
         with:
           context: accumulator/infra/hadoop-single-node-cluster
           tags: ${{ env.LOCAL_HADOOP_IMAGE_NAME }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          push: true
+          push: false
       - name: Spin up local accumulator
         run: make up-local-accumulator
       - name: Sleep for 15s seconds
@@ -46,25 +49,24 @@ jobs:
       # - name: run integration tests
       #   run: yarn sequencer test
   publish:
-    runs-on: ubuntu-latest
+    runs-on: minafoundation-default-runners
     needs: run_tests
-    if: github.ref == 'refs/heads/main'
+    #if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
         id: changes
         with:
          filters: |
            rollup:
              - 'rollup/src/**'
-      - id: install-aws-cli
-        uses: unfor19/install-aws-cli-action@v1
+      - name: Use Node.js
+        uses: actions/setup-node@v4.0.1
         with:
-          version: 2
-          verbose: false
-          arch: amd64
-          rootdir: ""
-          workdir: ""
+          node-version: 18.12
+      - name: Install Yarn
+        run: |
+          sudo npm install -g yarn
       - name: install yarn dependencies
         run: yarn install && yarn rollup build
       - name: re-build mapper/reducer scripts
@@ -75,20 +77,20 @@ jobs:
             aws s3 cp ./sequencer/scripts/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
             aws s3 cp ./accumulator/infra/emr_bootstrap_script.sh s3://${{ env.DATA_BUCKET_NAME }}/emr_bootstrap_script.sh
         env:
-          DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
+          DATA_BUCKET_NAME: 673156464838-mina-fast-zk-rollup-emr-data
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: eu-central-1
+          AWS_DEFAULT_REGION: us-west-2
       - name: Push contract compilation cache to S3 (only if changes were made in rollup/src/*)
         if: steps.changes.outputs.rollup == 'true'
         run: |
             yarn sequencer compile:zkapp && yarn sequencer compile:zkapp
             aws s3 cp ./sequencer/compilation s3://${{ env.DATA_BUCKET_NAME }}/compilation/ --recursive
         env:
-          DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
+          DATA_BUCKET_NAME: 673156464838-mina-fast-zk-rollup-emr-data
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: eu-central-1
+          AWS_DEFAULT_REGION: us-west-2
       - name: ECR Registry login
         uses: docker/login-action@v1
         with:
@@ -97,8 +99,16 @@ jobs:
           password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         env:
           AWS_REGION: "us-east-1"
+      - name: Create Docker Context
+        run: docker context create builder
+      - name: Install Yarn
+        run: |
+          sudo npm install -g yarn
+      - uses: docker/setup-buildx-action@v3
+        with:
+          endpoint: builder
       - name: Push to sequencer server image to ECR registry
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           tags: public.ecr.aws/${{secrets.ECR_REGISTRY}}/zk-rollup-docker-registry:latest
           push: true
