@@ -144,8 +144,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       '-files',
       `s3://${process.env.BUCKET_PREFIX}-emr-data/mapper.js,s3://${process.env.BUCKET_PREFIX}-emr-data/reducer.js`,
       '-D',
-      `mapred.reduce.tasks=${
-        Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
+      `mapred.reduce.tasks=${Math.round(numberOfProofs / REDUCER_SEQUENTIALISM) + 1
       }`,
       '-input',
       `${inputFileURL}`,
@@ -244,8 +243,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       }
 
       logger.info(
-        `EMR job ${data.StepIds} finished! Running time: ${
-          Date.now() - start
+        `EMR job ${data.StepIds} finished! Running time: ${Date.now() - start
         } ms`,
       );
       return outputDir;
@@ -287,8 +285,7 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
       },
     });
     logger.info(
-      `EMR: autoscaling cluster to ${targetInstanceCount} ${
-        this.onDemandInstances ? 'on-demand' : 'spot'
+      `EMR: autoscaling cluster to ${targetInstanceCount} ${this.onDemandInstances ? 'on-demand' : 'spot'
       } instances`,
     );
 
@@ -370,9 +367,9 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
           process.env.ADDITIONAL_SLAVE_SECURITY_GROUPS,
         ],
         Ec2SubnetIds: ec2SubnetIds,
-        Placement: {
-          AvailabilityZones: availabilityZones,
-        },
+        // Placement: {
+        //   AvailabilityZones: availabilityZones,
+        // },
         InstanceFleets: [
           {
             InstanceFleetType: 'MASTER',
