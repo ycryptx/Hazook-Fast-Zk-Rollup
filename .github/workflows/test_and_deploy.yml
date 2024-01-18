@@ -82,7 +82,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: us-west-2
       - name: Push contract compilation cache to S3 (only if changes were made in rollup/src/*)
-        if: steps.changes.outputs.rollup == 'true'
+        #if: steps.changes.outputs.rollup == 'true'
         run: |
             yarn sequencer compile:zkapp && yarn sequencer compile:zkapp
             aws s3 cp ./sequencer/compilation s3://${{ env.DATA_BUCKET_NAME }}/compilation/ --recursive
