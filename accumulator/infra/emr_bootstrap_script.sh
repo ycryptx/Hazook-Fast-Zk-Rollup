@@ -19,5 +19,6 @@ npm i -g o1js@^0.14.1
 
 ls $NODE_PATH
 
+BUCKET_PREFIX=${BUCKET_PREFIX:=mina-fast-zk-rollup}
 # Copy pre-compiled zkapp contract from S3 to each instance
-sudo aws s3 cp s3://mina-fast-zk-rollup-emr-data/compilation /compilation/ --recursive
+sudo aws s3 cp "s3://${BUCKET_PREFIX}-emr-data/compilation" /compilation/ --recursive
