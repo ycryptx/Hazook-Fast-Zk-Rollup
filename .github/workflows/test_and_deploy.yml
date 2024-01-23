@@ -27,6 +27,8 @@ jobs:
           sudo npm install -g yarn
       - uses: docker/setup-buildx-action@v3
         with:
+          username: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub username stored in GitHub Secrets
+          password: ${{ secrets.DOCKER_PASSWORD }}  # Docker Hub password stored in GitHub Secrets
           endpoint: builder
       - uses: docker/build-push-action@v5
         with:
