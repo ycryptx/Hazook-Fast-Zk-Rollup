@@ -4,3 +4,4 @@ bundle
 node_modules
 **/terraform*
 **/.terraform*
+accumulator/infra/emr_bootstrap_script.sh

@@ -71,6 +71,11 @@ jobs:
         run: yarn install && yarn rollup build
       - name: re-build mapper/reducer scripts
         run: make build-map-reduce-scripts
+      - name: Prepare EMR bootstrap script
+        run: |
+          sed "s/\${s3-prefix}-emr-data/${{ env.DATA_BUCKET_NAME }}/" ./accumulator/infra/templates/emr_bootstrap_script.sh.tftpl > ./accumulator/infra/emr_bootstrap_script.sh
+        env:
+          DATA_BUCKET_NAME: 673156464838-mina-fast-zk-rollup-emr-data
       - name: Push EMR Mapper/Reducer/Bootstrap to S3
         run: |
             aws s3 cp ./accumulator/infra/scripts/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
