@@ -2,3 +2,6 @@
 bundle
 .aws
 node_modules
+**/terraform*
+**/.terraform*
+accumulator/infra/emr_bootstrap_script.sh
