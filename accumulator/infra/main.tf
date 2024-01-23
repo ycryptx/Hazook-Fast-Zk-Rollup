@@ -137,32 +137,6 @@ resource "aws_iam_user_policy" "zk_rollup_data_bucket" {
   })
 }
 
-# TODO: we probably should rather upload those from the CI.
-# TODO: create a CI IAM role w/ write access to the emr-data bucket.
-
-resource "aws_s3_object" "emr_bootstrap_script" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "emr_bootstrap_script.sh"
-  content = templatefile(
-    "${path.module}/templates/emr_bootstrap_script.sh.tftpl",
-    { s3-prefix = local.s3-prefix }
-  )
-}
-
-resource "aws_s3_object" "emr_reducer" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "reducer.js"
-  source = "${path.module}/scripts/reducer.js"
-  etag   = filemd5("${path.module}/scripts/reducer.js")
-}
-
-resource "aws_s3_object" "emr_mapper" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "mapper.js"
-  source = "${path.module}/scripts/mapper.js"
-  etag   = filemd5("${path.module}/scripts/mapper.js")
-}
-
 # Public Subnet Setup
 #####################
 #
