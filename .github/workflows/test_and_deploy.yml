@@ -64,6 +64,14 @@ jobs:
          filters: |
            rollup:
              - 'rollup/src/**'
+      - id: install-aws-cli
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+          verbose: false
+          arch: amd64
+          rootdir: ""
+          workdir: ""
       - name: Use Node.js
         uses: actions/setup-node@v4.0.1
         with:
