@@ -21,10 +21,10 @@ build-map-reduce-scripts: # builds mapper and reducer scripts to be uploaded to 
 	mkdir sequencer/scripts; \
 	yarn rollup build; \
 	yarn sequencer build:scripts; \
-	echo '#!/usr/bin/env node\n' > ./sequencer/scripts/mapper.js; \
-	echo '#!/usr/bin/env node\n' > ./sequencer/scripts/reducer.js; \
-	cat ./sequencer/bundle/map-reduce/mapper.js >> ./sequencer/scripts/mapper.js; \
-	cat ./sequencer/bundle/map-reduce/reducer.js >> ./sequencer/scripts/reducer.js;
+	echo '#!/usr/bin/env node\n' > ./accumulator/infra/scripts/mapper.js; \
+	echo '#!/usr/bin/env node\n' > ./accumulator/infra/scripts/reducer.js; \
+	cat ./sequencer/bundle/map-reduce/mapper.js >> ./accumulator/infra/scripts/mapper.js; \
+	cat ./sequencer/bundle/map-reduce/reducer.js >> ./accumulator/infra/scripts/reducer.js;
 
 run-demo:
 	grpc_cli call 0.0.0.0:8080 Demo "case: 1"

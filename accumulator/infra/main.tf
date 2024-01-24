@@ -1,33 +1,40 @@
-variable "region" {
-  description = "AWS Deployment region."
-  default     = "eu-central-1"
-}
-
-variable "project" {
-  description = "Project name exposed in AWS user tag"
-  default     = "mina"
-}
-
 locals {
   s3-prefix = "${var.project}-fast-zk-rollup"
+  sequencer-nixos-config-values = {
+    openssh_public_key                = var.openssh_public_key,
+    public_dns                        = aws_eip.sequencer-eip.public_dns,
+    bucket_prefix                     = local.s3-prefix,
+    region                            = var.region
+    email                             = var.email
+    additional_master_security_groups = aws_security_group.emr_master.id
+    additional_slave_security_groups  = aws_security_group.emr_core.id
+    ec2_subnet_ids = [
+      aws_subnet.private_1.id
+    ]
+    zk-rollup-ecr = aws_ecrpublic_repository.zk_rollup.repository_uri
+  }
+
+  sequencer-nixos-config = templatefile(
+    "${path.module}/templates/sequencer-nixos-config.nix.tftpl",
+    local.sequencer-nixos-config-values
+  )
 }
 
 terraform {
-  backend "s3" {
-    bucket = "mina-tf-state"
-    key    = "tfstate"
-    region = "eu-central-1"
-  }
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.4"
+      version = "~> 5.32"
     }
   }
 }
 
 provider "aws" {
   region = var.region
+}
+
+data "aws_iam_user" "zk_rollup" {
+  user_name = var.aws_user
 }
 
 resource "aws_vpc" "main" {
@@ -97,13 +104,9 @@ resource "aws_s3_bucket" "emr_data" {
   }
 }
 
-data "aws_iam_user" "ci_user" {
-  user_name = "docker-registry-github"
-}
-
-resource "aws_iam_user_policy" "ci_user_data_bucket" {
-  name = "ci-user-data-bucket"
-  user = data.aws_iam_user.ci_user.user_name
+resource "aws_iam_user_policy" "zk_rollup_data_bucket" {
+  name = "zk-rollup-data-bucket"
+  user = data.aws_iam_user.zk_rollup.user_name
 
   # Terraform's "jsonencode" function converts a
   # Terraform expression result to valid JSON syntax.
@@ -132,30 +135,6 @@ resource "aws_iam_user_policy" "ci_user_data_bucket" {
       },
     ]
   })
-}
-
-# TODO: we probably should rather upload those from the CI.
-# TODO: create a CI IAM role w/ write access to the emr-data bucket.
-
-resource "aws_s3_object" "emr_bootstrap_script" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "emr_bootstrap_script.sh"
-  source = "bootstrap_script"
-  etag   = filemd5("emr_bootstrap_script.sh")
-}
-
-resource "aws_s3_object" "emr_reducer" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "reducer.js"
-  source = "../../sequencer/scripts/reducer.js"
-  etag   = filemd5("../../sequencer/scripts/reducer.js")
-}
-
-resource "aws_s3_object" "emr_mapper" {
-  bucket = aws_s3_bucket.emr_data.id
-  key    = "mapper.js"
-  source = "../../sequencer/scripts/mapper.js"
-  etag   = filemd5("../../sequencer/scripts/mapper.js")
 }
 
 # Public Subnet Setup
@@ -214,6 +193,8 @@ resource "aws_subnet" "private_1" {
     project = "${var.project}"
   }
 }
+
+## TODO: add more private subnets in a different availability zones, and also add them locals.ec2_subnet_ids
 
 resource "aws_eip" "nat_gateway" {
   domain = "vpc"
@@ -326,6 +307,29 @@ data "aws_iam_policy_document" "ec2_bucket_access" {
     ]
     resources = ["*"]
   }
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:CreateServiceLinkedRole",
+      "iam:PutRolePolicy"
+    ]
+    resources = ["arn:aws:iam::*:role/aws-service-role/elasticmapreduce.amazonaws.com*/AWSServiceRoleForEMRCleanup*"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:AWSServiceName"
+      values   = ["elasticmapreduce.amazonaws.com", "elasticmapreduce.amazonaws.com.cn"]
+    }
+  }
+  statement {
+    effect    = "Allow"
+    resources = ["arn:aws:iam::*:role/EMR_DefaultRole_V2", ]
+    actions   = ["iam:PassRole"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:PassedToService"
+      values   = ["elasticmapreduce.amazonaws.com*"]
+    }
+  }
 }
 
 data "aws_iam_policy_document" "ec2_assume_role" {
@@ -352,6 +356,11 @@ resource "aws_iam_role_policy" "iam_emr_ec2" {
   name   = "iam-emr-ec2"
   role   = aws_iam_role.iam_emr_ec2.name
   policy = data.aws_iam_policy_document.ec2_bucket_access.json
+}
+
+resource "aws_iam_role_policy_attachment" "iam_emr_mapreduce" {
+  role       = aws_iam_role.iam_emr_ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"
 }
 
 resource "aws_iam_instance_profile" "emr_ec2" {
@@ -458,6 +467,29 @@ data "aws_iam_policy_document" "sequencer_role_policy" {
     ]
     resources = ["*"]
   }
+  statement {
+    effect = "Allow"
+    actions = [
+      "iam:CreateServiceLinkedRole",
+      "iam:PutRolePolicy"
+    ]
+    resources = ["arn:aws:iam::*:role/aws-service-role/elasticmapreduce.amazonaws.com*/AWSServiceRoleForEMRCleanup*"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:AWSServiceName"
+      values   = ["elasticmapreduce.amazonaws.com", "elasticmapreduce.amazonaws.com.cn"]
+    }
+  }
+  statement {
+    effect    = "Allow"
+    resources = ["arn:aws:iam::*:role/EMR_DefaultRole_V2", ]
+    actions   = ["iam:PassRole"]
+    condition {
+      test     = "ForAnyValue:StringLike"
+      variable = "iam:PassedToService"
+      values   = ["elasticmapreduce.amazonaws.com*"]
+    }
+  }
 }
 
 resource "aws_iam_policy" "sequencer_policy" {
@@ -478,21 +510,21 @@ resource "aws_iam_instance_profile" "sequencer_emr_profile" {
 }
 
 resource "aws_eip" "sequencer-eip" {
-  instance = aws_instance.sequencer.id
-  domain   = "vpc"
+  domain = "vpc"
   tags = {
     project = "${var.project}"
   }
 }
 
-resource "aws_key_pair" "ycryptx" {
-  key_name   = "ycryptx"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCz7QlDRx7Vvra3XCfB4bWwFSxEgw81DHgeNrFTR5dxT/J29MfZhW+rjJXR4mVAvUGEBlNsGJ6EwBt65FqWxuWTGARoW2jBVMxqwqxldYLKHWcWTv8IdaYAQniKwfOX/3NaaQEw93HwHbb8aYjbBudR/UtwOgT0vDpuxUzPwIDRxea3Za64qV0H7s6PnfbC5DcC9fOX72fiGXuwMaZAUN8dIgI9mZcEn3yaWfwqYQ+Qcx6pDEWG73YLXJfoZ7UtSp+GF6lgOcTc7pw+NIoUcU/Pq+I0d7ECIEaRXv97U2R8lbgBRkR7NIBjxqSKHb3m5wfDvLQGrrn2Mg7zmGa8buyfeNaBfolEfa+c8R2fS8smvd7El3K/ogMeRJ3j5actRIP74UKqrgQd6nTJDkxD4F09bDHcke+PLlLkyURnatcRGH3J56sVTXRM5mRGuoFufBz8s6K+jS2Fmxirf97fJ61gq/M7w4LEDDX2gncrNeX+QmqGeWXV5wBFkvS2lxYGl88="
+resource "aws_eip_association" "sequencer-eip" {
+  instance_id          = aws_instance.sequencer.id
+  allocation_id        = aws_eip.sequencer-eip.id
+  network_interface_id = aws_network_interface.pub-sequencer.id
 }
 
 resource "aws_key_pair" "sequencer" {
   key_name   = "sequencer"
-  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ6tWZZkHYJJtD7G+hiOc8ICbNrDngrLtE/jst67wERX"
+  public_key = var.openssh_public_key
 }
 
 resource "aws_network_interface" "priv-sequencer" {
@@ -502,18 +534,28 @@ resource "aws_network_interface" "priv-sequencer" {
     device_index = 2
   }
 }
+resource "aws_network_interface" "pub-sequencer" {
+  subnet_id       = aws_subnet.public_1.id
+  security_groups = [aws_security_group.sequencer.id]
+}
 
 resource "aws_instance" "sequencer" {
-  ami                    = "ami-0d6ee9d5e1c985df6" # NixOS 23.05.426.afc48694f2a
-  subnet_id              = aws_subnet.public_1.id
-  instance_type          = "m5a.large"
-  user_data              = file("./sequencer-nixos-config.nix")
-  iam_instance_profile   = aws_iam_instance_profile.sequencer_emr_profile.name
-  vpc_security_group_ids = [aws_security_group.sequencer.id]
+  ami                  = "ami-0749963dd978a57c7" # us-west-2 NixOS 23.05.426.afc48694f2a
+  key_name             = aws_key_pair.sequencer.id
+  instance_type        = "m5a.large"
+  user_data            = local.sequencer-nixos-config
+  iam_instance_profile = aws_iam_instance_profile.sequencer_emr_profile.name
+
+  network_interface {
+    network_interface_id = aws_network_interface.pub-sequencer.id
+    device_index         = 0
+  }
   root_block_device {
     volume_size = 15
   }
   tags = {
     project = "${var.project}"
+    Name    = "${var.project}-sequencer"
   }
+  depends_on = [aws_eip.sequencer-eip]
 }

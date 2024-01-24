@@ -306,6 +306,10 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
     clusterId: string;
     taskFleetDetails: InstanceFleet;
   }> {
+    const ec2SubnetIds = process.env.EC2_SUBNET_IDS
+      ? JSON.parse(process.env.EC2_SUBNET_IDS)
+      : [];
+    console.log('deploying EMR in the following ec2 Subnet Ids', ec2SubnetIds);
     const describeAvailabilityZonesResponse = await new EC2Client({
       region: this.region,
     }).send(
@@ -359,9 +363,16 @@ export class MapReduceClient<RollupProof extends RollupProofBase> {
         },
       ],
       Instances: {
-        Placement: {
-          AvailabilityZones: availabilityZones,
-        },
+        AdditionalMasterSecurityGroups: [
+          process.env.ADDITIONAL_MASTER_SECURITY_GROUPS,
+        ],
+        AdditionalSlaveSecurityGroups: [
+          process.env.ADDITIONAL_SLAVE_SECURITY_GROUPS,
+        ],
+        Ec2SubnetIds: ec2SubnetIds,
+        // Placement: {
+        //   AvailabilityZones: availabilityZones,
+        // },
         InstanceFleets: [
           {
             InstanceFleetType: 'MASTER',

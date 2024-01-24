@@ -15,18 +15,25 @@ jobs:
     env:
       LOCAL_HADOOP_IMAGE_NAME: ycryptx/mina:hadoop
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Use Node.js
-        uses: actions/setup-node@v2.2.0
+        uses: actions/setup-node@v4.0.1
         with:
           node-version: 18.12
-      - uses: docker/setup-buildx-action@v1
+      - name: Create Docker Context
+        run: docker context create builder
+      - name: Install Yarn
+        run: |
+          sudo npm install -g yarn
+      - uses: docker/setup-buildx-action@v3
+        with:
+          endpoint: builder
       - name: Docker login
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub username stored in GitHub Secrets
           password: ${{ secrets.DOCKER_PASSWORD }}  # Docker Hub password stored in GitHub Secrets
-      - uses: docker/build-push-action@v2
+      - uses: docker/build-push-action@v5
         with:
           context: accumulator/infra/hadoop-single-node-cluster
           tags: ${{ env.LOCAL_HADOOP_IMAGE_NAME }}
@@ -50,7 +57,7 @@ jobs:
     needs: run_tests
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -65,14 +72,26 @@ jobs:
           arch: amd64
           rootdir: ""
           workdir: ""
+      - name: Use Node.js
+        uses: actions/setup-node@v4.0.1
+        with:
+          node-version: 18.12
+      - name: Install Yarn
+        run: |
+          sudo npm install -g yarn
       - name: install yarn dependencies
         run: yarn install && yarn rollup build
       - name: re-build mapper/reducer scripts
         run: make build-map-reduce-scripts
+      - name: Prepare EMR bootstrap script
+        run: |
+          sed "s/\${s3-prefix}-emr-data/${{ env.DATA_BUCKET_NAME }}/" ./accumulator/infra/templates/emr_bootstrap_script.sh.tftpl > ./accumulator/infra/emr_bootstrap_script.sh
+        env:
+          DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
       - name: Push EMR Mapper/Reducer/Bootstrap to S3
         run: |
-            aws s3 cp ./sequencer/scripts/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
-            aws s3 cp ./sequencer/scripts/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
+            aws s3 cp ./accumulator/infra/scripts/mapper.js s3://${{ env.DATA_BUCKET_NAME }}/mapper.js
+            aws s3 cp ./accumulator/infra/scripts/reducer.js s3://${{ env.DATA_BUCKET_NAME }}/reducer.js
             aws s3 cp ./accumulator/infra/emr_bootstrap_script.sh s3://${{ env.DATA_BUCKET_NAME }}/emr_bootstrap_script.sh
         env:
           DATA_BUCKET_NAME: mina-fast-zk-rollup-emr-data
@@ -97,8 +116,13 @@ jobs:
           password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         env:
           AWS_REGION: "us-east-1"
-      - name: Push to sequencer server image to ECR registry
-        uses: docker/build-push-action@v2
+      - name: Create Docker Context
+        run: docker context create builder
+      - uses: docker/setup-buildx-action@v3
         with:
-          tags: public.ecr.aws/y6u2m5w7/zk-rollup-docker-registry:latest
+          endpoint: builder
+      - name: Push to sequencer server image to ECR registry
+        uses: docker/build-push-action@v5
+        with:
+          tags: public.ecr.aws/${{secrets.ECR_REGISTRY}}/zk-rollup-docker-registry:latest
           push: true
